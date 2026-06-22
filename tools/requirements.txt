@@ -1,0 +1,7 @@
+# Python tooling for the Onam app (data import, seeding, admin utilities).
+# NOT a backend — the app runs on Supabase (Postgres) + a React frontend.
+
+openpyxl==3.1.5        # read the legacy TowerWise collection workbook
+pandas==2.2.3          # tabular transforms during import
+python-dotenv==1.0.1   # load Supabase keys from .env for seed scripts
+supabase==2.9.1        # seed/admin via Supabase (service role) when needed

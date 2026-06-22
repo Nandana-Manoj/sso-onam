@@ -1,0 +1,29 @@
+# Python tooling
+.venv/
+__pycache__/
+*.pyc
+
+# Node / frontend
+node_modules/
+web/node_modules/
+web/dist/
+dist/
+*.local
+
+# Env & secrets (never commit Supabase keys)
+.env
+.env.*
+!.env.example
+
+# Supabase
+supabase/.branches/
+supabase/.temp/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Data (source workbook + personal QR images — never commit)
+data/
