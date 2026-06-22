@@ -62,7 +62,7 @@ export default function AdminEvents() {
   return (
     <div className="page">
       <p className="page-back"><Link to="/admin">← Admin</Link></p>
-      <h2>Events &amp; Config</h2>
+      <h2>Events &amp; config</h2>
 
       {active ? (
         <ActiveEventEditor event={active} onChanged={load} />
@@ -110,6 +110,7 @@ export default function AdminEvents() {
 
 function ActiveEventEditor({ event, onChanged }: { event: EventConfig; onChanged: () => void }) {
   const [cfg, setCfg] = useState({
+    name: event.name,
     min_contribution: String(event.min_contribution),
     adult_sadya_price: String(event.adult_sadya_price),
     child_sadya_price: String(event.child_sadya_price),
@@ -128,6 +129,7 @@ function ActiveEventEditor({ event, onChanged }: { event: EventConfig; onChanged
     setBusy(true);
     const { error } = await supabase.rpc('update_event_config', {
       p_event_id: event.id,
+      p_name: cfg.name.trim() || null,
       p_min_contribution: Number(cfg.min_contribution),
       p_adult_price: Number(cfg.adult_sadya_price),
       p_child_price: Number(cfg.child_sadya_price),
@@ -179,6 +181,9 @@ function ActiveEventEditor({ event, onChanged }: { event: EventConfig; onChanged
       </div>
 
       <div className="card" style={{ marginTop: '0.9rem' }}>
+        <label>Event name
+          <input value={cfg.name} onChange={(e) => set('name', e.target.value)} placeholder="Onam 2026" />
+        </label>
         <div className="grid cols-3">
           <label>Min contribution (₹)
             <input type="number" value={cfg.min_contribution} onChange={(e) => set('min_contribution', e.target.value)} />

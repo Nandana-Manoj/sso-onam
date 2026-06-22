@@ -2,78 +2,89 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { formatINR } from '../../lib/format';
-import { assetUrl } from '../../lib/ui';
+import { assetUrl, byName } from '../../lib/ui';
 import OfflinePaymentForm from '../../components/OfflinePaymentForm';
-import type { Contribution, ContributionStatus } from '../../lib/types';
+import ContributionOverview, {
+  type OverviewContrib, type OverviewFlat, type OverviewTower,
+} from '../../components/ContributionOverview';
+import Modal from '../../components/Modal';
+import type { ContributionStatus } from '../../lib/types';
 
-interface QueueRow extends Contribution {
+interface ManagedTower extends OverviewTower {
+  rep_contact: string | null;
+  rep_upi_id: string | null;
+  rep_payment_phone: string | null;
+  payment_qr_path: string | null;
+}
+interface ContribRow {
+  id: string;
+  flat_id: string;
+  paid_to_tower_id: string;
+  status: ContributionStatus;
+  amount: number;
+  amount_paid: number | null;
+  utr: string | null;
+  payment_submitted_at: string | null;
   flats: { flat_number: string } | null;
 }
-interface Flat { id: string; flat_number: string; }
-interface Mini { flat_id: string; status: ContributionStatus; }
-
-type FlatState = 'verified' | 'awaiting' | 'pending' | 'none';
-const PRIORITY: Record<ContributionStatus, number> = {
-  verified: 4, submitted: 3, payment_pending: 2, rejected: 1, expired: 0,
-};
-const STATE_LABEL: Record<FlatState, string> = {
-  verified: 'Verified', awaiting: 'Awaiting', pending: 'Started', none: 'Not started',
-};
 
 export default function RepHome() {
   const { profile } = useAuth();
-  const [towerName, setTowerName] = useState<string | null>(null);
-  const [queue, setQueue] = useState<QueueRow[]>([]);
-  const [flats, setFlats] = useState<Flat[]>([]);
-  const [contribs, setContribs] = useState<Mini[]>([]);
+  const [towers, setTowers] = useState<ManagedTower[]>([]);
+  const [flats, setFlats] = useState<OverviewFlat[]>([]);
+  const [contribs, setContribs] = useState<ContribRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<ContribRow | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
-  // own payment details
+  // payment details (apply to all towers this rep manages)
   const [contact, setContact] = useState('');
   const [upiId, setUpiId] = useState('');
+  const [paymentPhone, setPaymentPhone] = useState('');
   const [qrPath, setQrPath] = useState<string | null>(null);
   const [qrBust, setQrBust] = useState(0);
   const [contactBusy, setContactBusy] = useState(false);
   const [contactMsg, setContactMsg] = useState<string | null>(null);
 
   const qrUrl = qrPath ? `${assetUrl('rep-qr', qrPath)}${qrBust ? `?v=${qrBust}` : ''}` : null;
-
-  useEffect(() => {
-    if (!profile?.tower_id) return;
-    supabase
-      .from('towers')
-      .select('name, rep_contact, rep_upi_id, payment_qr_path')
-      .eq('id', profile.tower_id)
-      .maybeSingle()
-      .then(({ data }) => {
-        const t = data as { name: string; rep_contact: string | null; rep_upi_id: string | null; payment_qr_path: string | null } | null;
-        setTowerName(t?.name ?? null);
-        setContact(t?.rep_contact ?? '');
-        setUpiId(t?.rep_upi_id ?? '');
-        setQrPath(t?.payment_qr_path ?? null);
-      });
-  }, [profile?.tower_id]);
+  const towerName = (id: string) => towers.find((t) => t.id === id)?.name ?? '—';
 
   const loadData = useCallback(async () => {
-    if (!profile?.tower_id) { setLoading(false); return; }
-    const [{ data: q, error: e1 }, { data: fl }, { data: c }] = await Promise.all([
+    if (!profile?.id) { setLoading(false); return; }
+    const { data: tw } = await supabase
+      .from('towers')
+      .select('id, name, rep_contact, rep_upi_id, rep_payment_phone, payment_qr_path')
+      .eq('rep_user_id', profile.id);
+    const managed = ((tw as ManagedTower[]) ?? []).sort(byName);
+    setTowers(managed);
+
+    // payment details apply to all managed towers — seed the form from the first
+    if (managed[0]) {
+      setContact(managed[0].rep_contact ?? '');
+      setUpiId(managed[0].rep_upi_id ?? '');
+      setPaymentPhone(managed[0].rep_payment_phone ?? '');
+      setQrPath(managed[0].payment_qr_path ?? null);
+    }
+
+    const ids = managed.map((t) => t.id);
+    if (ids.length === 0) {
+      setFlats([]); setContribs([]); setLoading(false); return;
+    }
+    const [{ data: fl }, { data: c, error: e }] = await Promise.all([
+      supabase.from('flats').select('id, tower_id, flat_number').in('tower_id', ids).order('flat_number'),
       supabase
         .from('contributions')
-        .select('*, flats(flat_number)')
-        .eq('paid_to_tower_id', profile.tower_id)
-        .eq('status', 'submitted')
+        .select('id, flat_id, paid_to_tower_id, status, amount, amount_paid, utr, payment_submitted_at, flats(flat_number)')
+        .in('paid_to_tower_id', ids)
         .order('payment_submitted_at', { ascending: true }),
-      supabase.from('flats').select('id, flat_number').eq('tower_id', profile.tower_id).order('flat_number'),
-      supabase.from('contributions').select('flat_id, status').eq('paid_to_tower_id', profile.tower_id),
     ]);
-    if (e1) setError(e1.message);
-    setQueue((q as QueueRow[]) ?? []);
-    setFlats((fl as Flat[]) ?? []);
-    setContribs((c as Mini[]) ?? []);
+    if (e) setError(e.message);
+    setFlats((fl as OverviewFlat[]) ?? []);
+    setContribs((c as unknown as ContribRow[]) ?? []);
     setLoading(false);
-  }, [profile?.tower_id]);
+  }, [profile?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -81,6 +92,7 @@ export default function RepHome() {
     const { error: e } = await supabase.rpc('set_my_rep_payment', {
       p_contact: contact.trim() || null,
       p_upi_id: upiId.trim() || null,
+      p_payment_phone: paymentPhone.trim() || null,
       p_qr_path: qrPathToSave,
     });
     return e;
@@ -90,7 +102,7 @@ export default function RepHome() {
     setContactBusy(true);
     const e = await persist(null);
     setContactBusy(false);
-    setContactMsg(e ? e.message : 'Saved — residents will see this when they pay.');
+    setContactMsg(e ? e.message : 'Saved — applies to all towers you manage.');
   }
   async function uploadQr(file: File) {
     if (!profile?.id) return;
@@ -106,46 +118,65 @@ export default function RepHome() {
     else { setQrPath(path); setQrBust(Date.now()); setContactMsg('QR uploaded — residents can scan it now.'); }
   }
 
-  async function decide(row: QueueRow, approve: boolean) {
+  async function approve(row: ContribRow) {
     setError(null);
-    let reason: string | null = null;
-    if (!approve) reason = window.prompt('Reason for rejection (optional):') ?? null;
     setBusyId(row.id);
     const { error: e } = await supabase.rpc('verify_contribution', {
-      p_contribution_id: row.id, p_approve: approve, p_reason: reason,
+      p_contribution_id: row.id, p_approve: true, p_reason: null,
     });
     setBusyId(null);
-    if (e) setError(e.message);
-    else loadData();
+    if (e) setError(e.message); else loadData();
+  }
+  async function confirmReject() {
+    if (!rejecting) return;
+    const row = rejecting;
+    setError(null);
+    setBusyId(row.id);
+    const { error: e } = await supabase.rpc('verify_contribution', {
+      p_contribution_id: row.id, p_approve: false, p_reason: rejectReason.trim() || null,
+    });
+    setBusyId(null);
+    setRejecting(null); setRejectReason('');
+    if (e) setError(e.message); else loadData();
   }
 
-  // flat states
-  const best = new Map<string, ContributionStatus>();
-  for (const c of contribs) {
-    const cur = best.get(c.flat_id);
-    if (!cur || PRIORITY[c.status] > PRIORITY[cur]) best.set(c.flat_id, c.status);
+  const queue = contribs.filter((c) => c.status === 'submitted');
+  const overviewContribs: OverviewContrib[] = contribs.map((c) => ({
+    flat_id: c.flat_id, paid_to_tower_id: c.paid_to_tower_id,
+    status: c.status, amount: c.amount, amount_paid: c.amount_paid,
+  }));
+
+  if (loading) return <div className="page"><p className="muted">Loading…</p></div>;
+
+  if (towers.length === 0) {
+    return (
+      <div className="page">
+        <div className="hero"><h2>Tower representative</h2></div>
+        <div className="card"><p className="muted">You're not assigned to any tower right now.</p></div>
+      </div>
+    );
   }
-  const stateOf = (id: string): FlatState => {
-    const s = best.get(id);
-    return s === 'verified' ? 'verified' : s === 'submitted' ? 'awaiting' : s === 'payment_pending' ? 'pending' : 'none';
-  };
-  const verifiedCount = flats.filter((f) => stateOf(f.id) === 'verified').length;
 
   return (
     <div className="page">
       <div className="hero">
-        <h2>Tower Representative</h2>
-        <p className="hero-sub">You manage <strong>{towerName ?? '—'}</strong> · {verifiedCount}/{flats.length} flats paid</p>
+        <h2>Tower representative</h2>
+        <p className="hero-sub">
+          Managing <strong>{towers.map((t) => t.name).join(', ')}</strong>
+        </p>
       </div>
 
       <div className="card card-accent">
         <h3>Your payment details</h3>
-        <p className="muted">Residents in your tower use these to pay you — a UPI ID (for tap-to-pay), your name/phone, and your QR.</p>
-        <label>UPI ID
+        <p className="muted">Used by residents in <strong>all towers you manage</strong>. Your UPI ID powers the resident's "pay" button but is never shown to them.</p>
+        <label>UPI ID (for the pay button — not shown to residents)
           <input placeholder="e.g. ravi@okaxis" value={upiId} onChange={(e) => setUpiId(e.target.value)} />
         </label>
-        <label>Your name / phone (shown to residents)
-          <input placeholder="e.g. Ravi · 98765 43210" value={contact} onChange={(e) => setContact(e.target.value)} />
+        <label>Payment mobile number (shown to residents to copy &amp; pay)
+          <input placeholder="e.g. 98765 43210" value={paymentPhone} onChange={(e) => setPaymentPhone(e.target.value)} />
+        </label>
+        <label>Your name (shown to residents)
+          <input placeholder="e.g. Ravi" value={contact} onChange={(e) => setContact(e.target.value)} />
         </label>
         <label style={{ marginTop: '1rem' }}>UPI QR image (so residents can scan)
           <input type="file" accept="image/*" disabled={contactBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadQr(f); }} />
@@ -163,16 +194,14 @@ export default function RepHome() {
       <div className="section-title"><h3>Verification queue</h3>
         {queue.length > 0 && <span className="badge awaiting">{queue.length}</span>}
       </div>
-      {loading ? (
-        <p className="muted">Loading…</p>
-      ) : queue.length === 0 ? (
+      {queue.length === 0 ? (
         <div className="card"><p className="muted">No payments waiting for verification. 🎉</p></div>
       ) : (
         <ul className="list">
           {queue.map((row) => (
             <li key={row.id} className="card card-accent">
               <p style={{ margin: '0 0 0.3rem' }}>
-                <strong>Flat {row.flats?.flat_number ?? '—'}</strong> · paid{' '}
+                <strong>{towerName(row.paid_to_tower_id)} · Flat {row.flats?.flat_number ?? '—'}</strong> · paid{' '}
                 <strong>{formatINR(row.amount_paid ?? row.amount)}</strong>
                 {row.utr ? <> · UTR <code>{row.utr}</code></> : <span className="muted"> · no UTR</span>}
               </p>
@@ -181,8 +210,8 @@ export default function RepHome() {
                 {row.payment_submitted_at ? ` · submitted ${new Date(row.payment_submitted_at).toLocaleString()}` : ''}
               </p>
               <div className="row">
-                <button className="success-btn" disabled={busyId === row.id} onClick={() => decide(row, true)}>Approve</button>
-                <button className="danger-btn" disabled={busyId === row.id} onClick={() => decide(row, false)}>Reject</button>
+                <button className="success-btn" disabled={busyId === row.id} onClick={() => approve(row)}>Approve</button>
+                <button className="danger-btn" disabled={busyId === row.id} onClick={() => setRejecting(row)}>Reject</button>
               </div>
             </li>
           ))}
@@ -193,34 +222,26 @@ export default function RepHome() {
       <div className="card card-accent">
         <h3>Record a walk-in / offline payment</h3>
         <p className="muted">For residents who paid you directly without using the app. This marks the flat as paid (verified).</p>
-        {profile?.tower_id && (
-          <OfflinePaymentForm towerId={profile.tower_id} onRecorded={loadData} />
-        )}
+        <OfflinePaymentForm towers={towers} onRecorded={loadData} />
       </div>
 
-      <div className="section-title"><h3>Tower progress</h3></div>
-      <div className="card">
-        {flats.length === 0 ? (
-          <p className="muted">No flats registered in your tower yet.</p>
-        ) : (
-          <div className="flat-grid">
-            {flats.map((f) => {
-              const st = stateOf(f.id);
-              return (
-                <span key={f.id} className={`flat-pill ${st}`}>
-                  <span className="dot" />{f.flat_number}
-                  <span className="muted" style={{ fontSize: '0.72rem' }}>· {STATE_LABEL[st]}</span>
-                </span>
-              );
-            })}
+      <div className="section-title"><h3>Your towers</h3></div>
+      <ContributionOverview towers={towers} flats={flats} contribs={overviewContribs} />
+
+      {rejecting && (
+        <Modal title="Reject this payment?" onClose={() => setRejecting(null)}>
+          <p className="muted">
+            {towerName(rejecting.paid_to_tower_id)} · Flat {rejecting.flats?.flat_number ?? '—'} · {formatINR(rejecting.amount_paid ?? rejecting.amount)}
+          </p>
+          <label>Reason (optional)
+            <input autoFocus value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="e.g. Payment not received" />
+          </label>
+          <div className="row">
+            <button className="danger-btn" disabled={busyId === rejecting.id} onClick={confirmReject}>Reject payment</button>
+            <button className="secondary" onClick={() => setRejecting(null)}>Cancel</button>
           </div>
-        )}
-      </div>
-
-      <div className="card disabled">
-        <h3>Collections · Handovers · Scan</h3>
-        <p className="muted">Coming in later phases.</p>
-      </div>
+        </Modal>
+      )}
     </div>
   );
 }

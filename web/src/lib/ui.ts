@@ -28,6 +28,11 @@ export function contributionStatusMeta(status: ContributionStatus | null | undef
   }
 }
 
+/** Natural/numeric name sort so "Tower 2" comes before "Tower 10". */
+export function byName<T extends { name: string }>(a: T, b: T): number {
+  return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+}
+
 /** Title-case a role like "tower_rep" -> "Tower Rep". */
 export function prettyRole(role: string): string {
   return role

@@ -57,6 +57,17 @@ a { color: var(--gold); text-decoration: none; font-weight: 600; }
 a:hover { text-decoration: underline; }
 
 /* ---------- Header ---------- */
+.top-banner {
+  text-align: center;
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: linear-gradient(90deg, #4d7c0f, #15803d);
+  padding: 0.35rem 1rem;
+}
+
 .app-header {
   display: flex;
   align-items: center;
@@ -301,6 +312,13 @@ code { background: #f4ecdd; padding: 0.05rem 0.35rem; border-radius: 6px; font-s
 .bar-row .bar-name { font-weight: 600; font-size: 0.9rem; }
 .bar-row .bar-val { font-size: 0.82rem; color: var(--muted); min-width: 56px; text-align: right; }
 
+/* ---------- Table ---------- */
+.tbl { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.tbl th, .tbl td { text-align: left; padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--line); }
+.tbl th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl td:last-child, .tbl th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+
 /* ---------- Flat status pills ---------- */
 .flat-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
 .flat-pill {
@@ -323,6 +341,27 @@ code { background: #f4ecdd; padding: 0.05rem 0.35rem; border-radius: 6px; font-s
 .auth-page form button { width: 100%; }
 
 .center { padding: 3rem; text-align: center; color: var(--muted); }
+
+/* ---------- Modal ---------- */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(43, 33, 23, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  animation: fade-in 0.12s ease;
+}
+.modal-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  padding: 1.2rem;
+  width: 100%; max-width: 420px;
+  animation: pop-in 0.14s ease;
+}
+.modal-card h3 { margin-top: 0; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
 
 /* ---------- Misc ---------- */
 .divider { height: 1px; background: var(--line); margin: 1rem 0; border: none; }

@@ -13,6 +13,7 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
   const [contribution, setContribution] = useState<Contribution | null>(null);
   const [repContact, setRepContact] = useState<string | null>(null);
   const [repUpiId, setRepUpiId] = useState<string | null>(null);
+  const [repPhone, setRepPhone] = useState<string | null>(null);
   const [repQrUrl, setRepQrUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [savingQr, setSavingQr] = useState(false);
@@ -47,17 +48,26 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
     load();
   }, [load]);
 
+  // prefill the "amount paid" with the pledged amount once a pending contribution appears
+  useEffect(() => {
+    if (contribution?.status === 'payment_pending') setAmountPaid(String(contribution.amount));
+  }, [contribution?.id, contribution?.status, contribution?.amount]);
+
   useEffect(() => {
     if (!profile?.tower_id) return;
     supabase
       .from('towers')
-      .select('rep_contact, rep_upi_id, payment_qr_path')
+      .select('rep_contact, rep_upi_id, rep_payment_phone, payment_qr_path')
       .eq('id', profile.tower_id)
       .maybeSingle()
       .then(({ data }) => {
-        const t = data as { rep_contact: string | null; rep_upi_id: string | null; payment_qr_path: string | null } | null;
+        const t = data as {
+          rep_contact: string | null; rep_upi_id: string | null;
+          rep_payment_phone: string | null; payment_qr_path: string | null;
+        } | null;
         setRepContact(t?.rep_contact ?? null);
         setRepUpiId(t?.rep_upi_id ?? null);
+        setRepPhone(t?.rep_payment_phone ?? null);
         setRepQrUrl(
           t?.payment_qr_path
             ? supabase.storage.from('rep-qr').getPublicUrl(t.payment_qr_path).data.publicUrl
@@ -66,10 +76,10 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
       });
   }, [profile?.tower_id]);
 
-  async function copyUpi() {
-    if (!repUpiId) return;
+  async function copyPhone() {
+    if (!repPhone) return;
     try {
-      await navigator.clipboard.writeText(repUpiId);
+      await navigator.clipboard.writeText(repPhone);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -106,7 +116,7 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
     setBusy(true);
     const { error: e1 } = await supabase.rpc('submit_contribution_payment', {
       p_contribution_id: contribution.id,
-      p_amount_paid: Number(amountPaid),
+      p_amount_paid: Number(amountPaid) || contribution.amount,
       p_utr: utr.trim() || null,
     });
     setBusy(false);
@@ -158,70 +168,73 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
       {contribution?.status === 'payment_pending' && (
         <>
           <p>
-            Pledged: <strong>{formatINR(contribution.amount)}</strong> — pay your tower rep, then record it below.
+            Pledged: <strong>{formatINR(contribution.amount)}</strong> — pay your tower rep, then submit below.
           </p>
           <div className="card">
             <strong>Pay your tower rep{repContact ? ` · ${repContact}` : ''}</strong>
 
+            <label>Amount to pay (₹)
+              <input
+                type="number"
+                min={event.min_contribution}
+                step="1"
+                value={amountPaid}
+                onChange={(e) => setAmountPaid(e.target.value)}
+              />
+            </label>
+
+            {/* 1. Tap-to-pay button (routes to the rep's UPI ID, not shown) */}
             {repUpiId && (
               <a
                 className="pay-btn"
                 href={buildUpiLink({
                   pa: repUpiId,
                   pn: repContact ?? undefined,
-                  am: contribution.amount,
+                  am: Number(amountPaid) || contribution.amount,
                   tn: `${event.name} contribution`,
                 })}
               >
-                Pay {formatINR(contribution.amount)} in your UPI app
+                Pay {formatINR(Number(amountPaid) || contribution.amount)} in your UPI app
               </a>
             )}
 
-            {repQrUrl && (
-              <div>
-                <p className="muted">Or scan this QR in any UPI app:</p>
-                <img
-                  src={repQrUrl}
-                  alt="Tower rep UPI QR"
-                  style={{ maxWidth: 240, border: '1px solid var(--line)', borderRadius: 10, display: 'block' }}
-                />
-                <button type="button" className="secondary icon-text" disabled={savingQr} onClick={saveQr}>
-                  <DownloadIcon /> {savingQr ? 'Saving…' : 'Save QR to phone'}
-                </button>
-              </div>
-            )}
-
-            {repUpiId && (
-              <div className="row" style={{ marginTop: '0.5rem' }}>
-                <code style={{ flex: 1 }}>{repUpiId}</code>
-                <button type="button" className="icon-btn" title="Copy UPI ID" onClick={copyUpi}>
+            {/* 2. Phone number to copy */}
+            {repPhone && (
+              <div className="row" style={{ marginTop: '0.6rem' }}>
+                <span style={{ flex: 1 }}>Or pay this number: <strong>{repPhone}</strong></span>
+                <button type="button" className="icon-btn" title="Copy number" onClick={copyPhone}>
                   {copied ? <CheckIcon /> : <CopyIcon />}
                 </button>
               </div>
             )}
 
-            {!repUpiId && !repQrUrl && (
+            {/* 3. QR in a toggle (closed by default) */}
+            {repQrUrl && (
+              <details className="disclosure" style={{ marginTop: '0.6rem' }}>
+                <summary>Show QR to scan</summary>
+                <img
+                  src={repQrUrl}
+                  alt="Tower rep UPI QR"
+                  style={{ maxWidth: 240, border: '1px solid var(--line)', borderRadius: 10, display: 'block', marginTop: '0.5rem' }}
+                />
+                <button type="button" className="secondary icon-text" disabled={savingQr} onClick={saveQr}>
+                  <DownloadIcon /> {savingQr ? 'Saving…' : 'Save QR to phone'}
+                </button>
+              </details>
+            )}
+
+            {!repUpiId && !repPhone && !repQrUrl && (
               <p className="muted">Rep payment details not set yet — please contact your tower rep.</p>
             )}
           </div>
           <form onSubmit={submitPayment}>
             <label>
-              Amount paid (₹)
-              <input
-                type="number"
-                min="1"
-                step="1"
-                placeholder={String(contribution.amount)}
-                value={amountPaid}
-                onChange={(e) => setAmountPaid(e.target.value)}
-                required
-              />
-            </label>
-            <label>
               UTR / reference (optional)
               <input value={utr} onChange={(e) => setUtr(e.target.value)} placeholder="UPI transaction ref" />
             </label>
-            <button type="submit" disabled={busy}>I've paid — submit for verification</button>
+            <button type="submit" disabled={busy}>
+              I've paid {formatINR(Number(amountPaid) || contribution.amount)} — submit for verification
+            </button>
           </form>
         </>
       )}
@@ -237,7 +250,7 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
       {/* Verified */}
       {contribution?.status === 'verified' && (
         <p className="success">
-          ✓ Contribution of {formatINR(contribution.amount_paid ?? contribution.amount)} verified. Thank you!
+          ✓ Received Rs. {(contribution.amount_paid ?? contribution.amount).toLocaleString('en-IN')} towards {event.name}. Thank you!
         </p>
       )}
 

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { prettyRole } from '../../lib/ui';
+import { prettyRole, byName } from '../../lib/ui';
 import { formatINR } from '../../lib/format';
+import Modal from '../../components/Modal';
 import type { Tower } from '../../lib/types';
 
 interface Candidate {
@@ -29,12 +30,14 @@ export default function AdminReps() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Candidate[]>([]);
   const [searched, setSearched] = useState(false);
+  const [picks, setPicks] = useState<Record<string, string>>({}); // candidateId -> towerId
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [removing, setRemoving] = useState<Tower | null>(null);
 
   const load = useCallback(async () => {
     const { data: tw } = await supabase.from('towers').select('*').order('name');
-    const towerRows = (tw as Tower[]) ?? [];
+    const towerRows = ((tw as Tower[]) ?? []).sort(byName);
     setTowers(towerRows);
 
     const { data: ev } = await supabase.from('events').select('id').eq('is_active', true).maybeSingle();
@@ -94,24 +97,28 @@ export default function AdminReps() {
   const towerName = (id: string | null) => towers.find((t) => t.id === id)?.name ?? null;
 
   async function assign(c: Candidate) {
+    const towerId = picks[c.id];
+    if (!towerId) return;
     setBusy(true);
     setMsg(null);
-    const { error } = await supabase.rpc('assign_tower_rep', { p_user_id: c.id });
+    const { error } = await supabase.rpc('assign_tower_rep', { p_user_id: c.id, p_tower_id: towerId });
     setBusy(false);
     if (error) setMsg(error.message);
     else {
-      setMsg(`${c.name} is now the rep for ${towerName(c.tower_id)}.`);
-      setResults([]); setQuery(''); setSearched(false);
+      setMsg(`${c.name} is now the rep for ${towerName(towerId)}.`);
+      setResults([]); setQuery(''); setSearched(false); setPicks({});
       load();
     }
   }
 
-  async function removeRep(t: Tower) {
-    if (!window.confirm(`Remove the rep for ${t.name}? Their past verified collections stay recorded.`)) return;
+  async function confirmRemove() {
+    if (!removing) return;
+    const t = removing;
     setBusy(true);
     setMsg(null);
     const { error } = await supabase.rpc('remove_tower_rep', { p_tower_id: t.id });
     setBusy(false);
+    setRemoving(null);
     if (error) setMsg(error.message);
     else { setMsg(`Removed the rep for ${t.name}.`); load(); }
   }
@@ -138,7 +145,7 @@ export default function AdminReps() {
     <div className="page">
       <p className="page-back"><Link to="/admin">← Admin</Link></p>
       <h2>Representatives</h2>
-      <p className="muted">Search a registered resident by name, mobile, or flat number. A rep can only represent their own tower.</p>
+      <p className="muted">Search a registered resident by name, mobile, or flat number, then assign them as the rep of any tower. One person can rep multiple towers.</p>
 
       <form onSubmit={search} className="card row">
         <input placeholder="Name, mobile, or flat number" value={query} onChange={(e) => setQuery(e.target.value)} required />
@@ -163,10 +170,19 @@ export default function AdminReps() {
               </div>
             </div>
           </div>
-          {c.tower_id ? (
-            <button onClick={() => assign(c)} disabled={busy}>Make rep of {towerName(c.tower_id)}</button>
+          {c.role === 'admin' ? (
+            <p className="muted">This person is an admin and can't be a tower rep.</p>
           ) : (
-            <p className="muted">No tower on record — cannot assign as a rep.</p>
+            <div className="row" style={{ marginTop: '0.5rem' }}>
+              <select
+                value={picks[c.id] ?? ''}
+                onChange={(e) => setPicks((p) => ({ ...p, [c.id]: e.target.value }))}
+              >
+                <option value="" disabled>Select tower</option>
+                {towers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+              <button onClick={() => assign(c)} disabled={busy || !picks[c.id]}>Make rep</button>
+            </div>
           )}
         </div>
       ))}
@@ -189,7 +205,7 @@ export default function AdminReps() {
                     {t.rep_contact ? 'Payment set' : 'No payment'}
                   </span>
                   {t.rep_user_id && (
-                    <button className="danger-btn" disabled={busy} onClick={() => removeRep(t)}>Remove</button>
+                    <button className="danger-btn" disabled={busy} onClick={() => setRemoving(t)}>Remove</button>
                   )}
                 </span>
               </div>
@@ -212,6 +228,18 @@ export default function AdminReps() {
           );
         })}
       </ul>
+
+      {removing && (
+        <Modal title={`Remove the rep for ${removing.name}?`} onClose={() => setRemoving(null)}>
+          <p className="muted">
+            They'll go back to being a resident. Their past verified collections stay recorded and attributed to them.
+          </p>
+          <div className="row">
+            <button className="danger-btn" disabled={busy} onClick={confirmRemove}>Remove rep</button>
+            <button className="secondary" onClick={() => setRemoving(null)}>Cancel</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

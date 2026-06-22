@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { byName } from '../../lib/ui';
 import type { Tower } from '../../lib/types';
 
 export default function AdminTowers() {
@@ -13,7 +14,7 @@ export default function AdminTowers() {
   async function load() {
     const { data, error } = await supabase.from('towers').select('*').order('name');
     if (error) setMsg(error.message);
-    else setTowers((data as Tower[]) ?? []);
+    else setTowers(((data as Tower[]) ?? []).sort(byName));
   }
   useEffect(() => {
     load();

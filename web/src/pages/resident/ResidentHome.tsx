@@ -9,6 +9,7 @@ import ContributionPanel from './ContributionPanel';
 export default function ResidentHome() {
   const { profile } = useAuth();
   const [event, setEvent] = useState<EventConfig | null>(null);
+  const [repContact, setRepContact] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,6 +23,16 @@ export default function ResidentHome() {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    if (!profile?.tower_id) return;
+    supabase
+      .from('towers')
+      .select('rep_contact')
+      .eq('id', profile.tower_id)
+      .maybeSingle()
+      .then(({ data }) => setRepContact((data as { rep_contact: string | null } | null)?.rep_contact ?? null));
+  }, [profile?.tower_id]);
 
   const logo = assetUrl('event-assets', event?.logo_path);
 
@@ -45,6 +56,13 @@ export default function ResidentHome() {
           </div>
 
           <ContributionPanel event={event} />
+
+          <div className="card">
+            <h3>Your tower rep</h3>
+            {repContact
+              ? <p style={{ margin: 0 }}>{repContact}</p>
+              : <p className="muted" style={{ margin: 0 }}>Your tower's rep hasn't added their contact yet.</p>}
+          </div>
 
           <div className="card disabled">
             <h3>Book Sadya 🍛</h3>

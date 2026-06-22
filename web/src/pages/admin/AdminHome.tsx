@@ -18,12 +18,16 @@ export default function AdminHome() {
           <h3>🧑‍🤝‍🧑 Representatives</h3>
           <p className="muted">Assign or remove tower reps; see each rep's collections.</p>
         </Link>
+        <Link to="/admin/admins" className="card link-card">
+          <h3>🛡️ Admins</h3>
+          <p className="muted">Grant or revoke admin access for other residents.</p>
+        </Link>
       </div>
 
       <div className="section-title"><h3>Setup</h3></div>
       <div className="grid cols-2">
         <Link to="/admin/events" className="card link-card">
-          <h3>🎏 Events &amp; Config</h3>
+          <h3>🎏 Events &amp; config</h3>
           <p className="muted">Set prices, the active event, and the event logo.</p>
         </Link>
         <Link to="/admin/towers" className="card link-card">
