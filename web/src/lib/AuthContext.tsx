@@ -59,16 +59,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(async ({ data }) => {
+    // onAuthStateChange fires INITIAL_SESSION on subscribe (and SIGNED_IN after
+    // the OAuth code exchange). We must NOT await Supabase DB calls *inside* the
+    // callback — that runs under the auth lock and deadlocks (symptom: stuck on
+    // "Loading…" after Google login until a refresh). Defer loadProfile instead.
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       if (!active) return;
-      setSession(data.session);
-      if (data.session) await loadProfile(data.session.user.id);
-      setLoading(false);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
-      if (s) await loadProfile(s.user.id);
-      else setProfile(null);
+      if (s) {
+        setTimeout(async () => {
+          await loadProfile(s.user.id);
+          if (active) setLoading(false);
+        }, 0);
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
     });
     return () => {
       active = false;
