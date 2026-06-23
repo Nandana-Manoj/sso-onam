@@ -7,7 +7,8 @@ export default function ProtectedRoute({ roles }: { roles?: UserRole[] }) {
   const { session, profile, loading } = useAuth();
   if (loading) return <div className="center">Loading…</div>;
   if (!session) return <Navigate to="/login" replace />;
-  if (roles && profile && !roles.includes(profile.role)) {
+  if (!profile) return <Navigate to="/onboarding" replace />;
+  if (roles && !roles.includes(profile.role)) {
     return <Navigate to="/" replace />;
   }
   return (

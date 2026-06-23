@@ -50,6 +50,24 @@ export function buildUpiLink(opts: { pa: string; pn?: string; am?: number | stri
   return `upi://pay?${parts.join('&')}`;
 }
 
+/** Build + download a CSV file (no dependency). */
+export function downloadCsv(filename: string, headers: string[], rows: (string | number | null)[][]): void {
+  const esc = (v: string | number | null) => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [headers, ...rows].map((r) => r.map(esc).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 /** Download an image (e.g. a QR) to the device — saves to the camera roll on mobile. */
 export async function saveImage(url: string, filename: string): Promise<void> {
   const res = await fetch(url);

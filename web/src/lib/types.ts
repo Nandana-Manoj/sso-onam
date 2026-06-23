@@ -62,6 +62,8 @@ export interface Contribution {
   verified_at: string | null;
   decision_reason: string | null;
   overridden: boolean;
+  refund_state: 'requested' | 'refunded' | null;
+  refund_reason: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -6,7 +6,7 @@ export default function RoleHome() {
   const { session, profile, loading } = useAuth();
   if (loading) return <div className="center">Loading…</div>;
   if (!session) return <Navigate to="/login" replace />;
-  if (!profile) return <Navigate to="/login" replace />;
+  if (!profile) return <Navigate to="/onboarding" replace />;
   switch (profile.role) {
     case 'admin':
       return <Navigate to="/admin" replace />;

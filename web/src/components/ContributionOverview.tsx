@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatINR } from '../lib/format';
+import { downloadCsv } from '../lib/ui';
 import { Donut } from './Charts';
 import type { ContributionStatus } from '../lib/types';
 
@@ -11,39 +12,58 @@ export interface OverviewContrib {
   status: ContributionStatus;
   amount: number;
   amount_paid: number | null;
+  refund_state?: 'requested' | 'refunded' | null;
 }
 
-type FlatState = 'verified' | 'awaiting' | 'pending' | 'none';
-const PRIORITY: Record<ContributionStatus, number> = {
-  verified: 4, submitted: 3, payment_pending: 2, rejected: 1, expired: 0,
+type FlatState = 'verified' | 'awaiting' | 'pending' | 'refunded' | 'none';
+const PRIORITY: Record<FlatState, number> = {
+  verified: 5, awaiting: 4, pending: 3, refunded: 2, none: 0,
 };
 const STATE_LABEL: Record<FlatState, string> = {
-  verified: 'Verified', awaiting: 'Awaiting', pending: 'Started', none: 'Not started',
+  verified: 'Verified', awaiting: 'Awaiting', pending: 'Started', refunded: 'Refunded', none: 'Not started',
 };
 
-/** Shared contributions dashboard: stat tiles + status donut + per-tower bars
- *  that expand to each flat's status and paid amount. Used by admin and reps. */
+function effState(c: OverviewContrib): FlatState {
+  if (c.refund_state === 'refunded') return 'refunded';
+  return c.status === 'verified' ? 'verified'
+    : c.status === 'submitted' ? 'awaiting'
+    : c.status === 'payment_pending' ? 'pending' : 'none';
+}
+
+/** Shared contributions dashboard: stat tiles + status donut + per-tower amount
+ *  bars + a Flats & amounts table. Used by admin and reps. */
 export default function ContributionOverview({
   towers, flats, contribs,
 }: { towers: OverviewTower[]; flats: OverviewFlat[]; contribs: OverviewContrib[] }) {
-  const [open, setOpen] = useState<string | null>(null);
-
   const amt = (c: OverviewContrib) => Number(c.amount_paid ?? c.amount);
 
-  // best (current) status + amount per flat
-  const best = new Map<string, { status: ContributionStatus; amount: number }>();
+  // best (current) effective state + amount per flat (refunded is a real state)
+  const best = new Map<string, { state: FlatState; amount: number }>();
   for (const c of contribs) {
+    const st = effState(c);
+    if (st === 'none') continue;
     const cur = best.get(c.flat_id);
-    if (!cur || PRIORITY[c.status] > PRIORITY[cur.status]) best.set(c.flat_id, { status: c.status, amount: amt(c) });
+    if (!cur || PRIORITY[st] > PRIORITY[cur.state]) best.set(c.flat_id, { state: st, amount: amt(c) });
   }
-  const stateOf = (flatId: string): FlatState => {
-    const s = best.get(flatId)?.status;
-    return s === 'verified' ? 'verified' : s === 'submitted' ? 'awaiting' : s === 'payment_pending' ? 'pending' : 'none';
-  };
+  const stateOf = (flatId: string): FlatState => best.get(flatId)?.state ?? 'none';
+  const amountOf = (flatId: string) => best.get(flatId)?.amount;
 
-  const verifiedTotal = contribs.filter((c) => c.status === 'verified').reduce((s, c) => s + amt(c), 0);
-  const counts = { verified: 0, awaiting: 0, pending: 0, none: 0 };
+  const verifiedTotal = contribs
+    .filter((c) => c.status === 'verified' && c.refund_state !== 'refunded')
+    .reduce((s, c) => s + amt(c), 0);
+  const refunded = contribs.filter((c) => c.refund_state === 'refunded');
+  const refundedTotal = refunded.reduce((s, c) => s + amt(c), 0);
+
+  const counts: Record<FlatState, number> = { verified: 0, awaiting: 0, pending: 0, refunded: 0, none: 0 };
   for (const f of flats) counts[stateOf(f.id)] += 1;
+
+  // amount collected per tower (verified, not refunded)
+  const collectedByTower = new Map<string, number>();
+  for (const c of contribs) {
+    if (c.status !== 'verified' || c.refund_state === 'refunded') continue;
+    collectedByTower.set(c.paid_to_tower_id, (collectedByTower.get(c.paid_to_tower_id) ?? 0) + amt(c));
+  }
+  const maxTower = Math.max(1, ...towers.map((t) => collectedByTower.get(t.id) ?? 0));
 
   return (
     <>
@@ -60,6 +80,12 @@ export default function ContributionOverview({
           <div className="stat-value">{counts.verified}/{flats.length}</div>
           <div className="stat-label">Flats paid</div>
         </div>
+        {(refundedTotal > 0 || counts.refunded > 0) && (
+          <div className="stat red">
+            <div className="stat-value">{formatINR(refundedTotal)}</div>
+            <div className="stat-label">Refunded ({refunded.length})</div>
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -69,6 +95,7 @@ export default function ContributionOverview({
             { value: counts.verified, color: '#15803d', label: 'Verified' },
             { value: counts.awaiting, color: '#1d4ed8', label: 'Awaiting' },
             { value: counts.pending, color: '#b45309', label: 'Started' },
+            { value: counts.refunded, color: '#b91c1c', label: 'Refunded' },
             { value: counts.none, color: '#e7d8bf', label: 'Not started' },
           ]}
           centerLabel={flats.length ? `${Math.round((counts.verified / flats.length) * 100)}%` : '—'}
@@ -77,57 +104,32 @@ export default function ContributionOverview({
       </div>
 
       <div className="card">
-        <h3>By tower · flats verified</h3>
+        <h3>Amount collected by tower</h3>
         {towers.map((t) => {
-          const tFlats = flats.filter((f) => f.tower_id === t.id);
-          const v = tFlats.filter((f) => stateOf(f.id) === 'verified').length;
-          const pct = tFlats.length ? (v / tFlats.length) * 100 : 0;
-          const isOpen = open === t.id;
+          const total = collectedByTower.get(t.id) ?? 0;
+          const pct = total > 0 ? Math.max((total / maxTower) * 100, 4) : 0;
           return (
-            <div key={t.id}>
-              <div
-                className="bar-row"
-                style={{ cursor: tFlats.length ? 'pointer' : 'default' }}
-                onClick={() => tFlats.length && setOpen(isOpen ? null : t.id)}
-              >
-                <span className="bar-name">{isOpen ? '▾ ' : '▸ '}{t.name}</span>
-                <span className="bar-track"><span className="bar-fill" style={{ width: `${pct}%` }} /></span>
-                <span className="bar-val">{v}/{tFlats.length}</span>
-              </div>
-              {isOpen && (
-                <div className="flat-grid" style={{ marginBottom: '0.7rem' }}>
-                  {tFlats.length === 0 && <span className="muted">No flats registered yet.</span>}
-                  {tFlats.map((f) => {
-                    const st = stateOf(f.id);
-                    const a = best.get(f.id)?.amount;
-                    return (
-                      <span key={f.id} className={`flat-pill ${st}`}>
-                        <span className="dot" />
-                        {f.flat_number}
-                        <span className="muted" style={{ fontSize: '0.72rem' }}>
-                          {st === 'verified' && a ? `· ${formatINR(a)}` : `· ${STATE_LABEL[st]}`}
-                        </span>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
+            <div className="bar-row" key={t.id}>
+              <span className="bar-name">{t.name}</span>
+              <span className="bar-track"><span className="bar-fill" style={{ width: `${pct}%` }} /></span>
+              <span className="bar-val">{formatINR(total)}</span>
             </div>
           );
         })}
         {towers.length === 0 && <p className="muted">No towers yet.</p>}
       </div>
 
-      <FlatTable towers={towers} flats={flats} stateOf={stateOf} amountOf={(id) => best.get(id)?.amount} />
+      <FlatTable towers={towers} flats={flats} collectedByTower={collectedByTower} stateOf={stateOf} amountOf={amountOf} />
     </>
   );
 }
 
 function FlatTable({
-  towers, flats, stateOf, amountOf,
+  towers, flats, collectedByTower, stateOf, amountOf,
 }: {
   towers: OverviewTower[];
   flats: OverviewFlat[];
+  collectedByTower: Map<string, number>;
   stateOf: (flatId: string) => FlatState;
   amountOf: (flatId: string) => number | undefined;
 }) {
@@ -147,9 +149,24 @@ function FlatTable({
         : towerName(a.towerId).localeCompare(towerName(b.towerId), undefined, { numeric: true }),
     );
 
+  const amountFor = (st: FlatState, a?: number) =>
+    (st === 'verified' || st === 'awaiting' || st === 'refunded') && a ? a : '';
+
+  function exportCsv() {
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(
+      `onam-contributions-${stamp}.csv`,
+      ['Tower', 'Flat', 'Status', 'Amount (Rs.)'],
+      rows.map((r) => [towerName(r.towerId), r.flat, STATE_LABEL[r.st], amountFor(r.st, r.amt)]),
+    );
+  }
+
   return (
     <div className="card">
-      <h3>Flats &amp; amounts</h3>
+      <div className="between">
+        <h3>Flats &amp; amounts</h3>
+        <button className="secondary" disabled={rows.length === 0} onClick={exportCsv}>Download CSV</button>
+      </div>
       <div className="row" style={{ marginBottom: '0.6rem' }}>
         {multiTower && (
           <select value={towerFilter} onChange={(e) => setTowerFilter(e.target.value)} style={{ flex: 1 }}>
@@ -162,6 +179,7 @@ function FlatTable({
           <option value="verified">Verified</option>
           <option value="awaiting">Awaiting</option>
           <option value="pending">Started</option>
+          <option value="refunded">Refunded</option>
         </select>
       </div>
       {rows.length === 0 ? (
@@ -184,10 +202,22 @@ function FlatTable({
                 <td>{r.flat}</td>
                 {multiTower && <td>{towerName(r.towerId)}</td>}
                 <td><span className={`badge soft ${r.st}`}>{STATE_LABEL[r.st]}</span></td>
-                <td>{(r.st === 'verified' || r.st === 'awaiting') && r.amt ? formatINR(r.amt) : '—'}</td>
+                <td>{amountFor(r.st, r.amt) ? formatINR(r.amt as number) : '—'}</td>
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr>
+              <th>Total collected</th>
+              {multiTower && <th />}
+              <th />
+              <th>{formatINR(
+                (towerFilter === 'all'
+                  ? [...collectedByTower.values()].reduce((s, v) => s + v, 0)
+                  : collectedByTower.get(towerFilter) ?? 0),
+              )}</th>
+            </tr>
+          </tfoot>
         </table>
       )}
     </div>

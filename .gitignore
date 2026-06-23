@@ -27,3 +27,5 @@ Thumbs.db
 
 # Data (source workbook + personal QR images — never commit)
 data/
+
+secrets/

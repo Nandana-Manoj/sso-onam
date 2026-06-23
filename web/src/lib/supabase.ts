@@ -11,6 +11,7 @@ export const supabase = createClient(url, key, {
   auth: {
     persistSession: true,      // long "remember me" session through the active weeks
     autoRefreshToken: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,  // needed to complete the Google OAuth redirect
+    flowType: 'pkce',
   },
 });

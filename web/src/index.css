@@ -198,6 +198,7 @@ a:hover { text-decoration: underline; }
 .stat.green::before { background: var(--green); }
 .stat.blue::before { background: var(--blue); }
 .stat.amber::before { background: var(--amber); }
+.stat.red::before { background: var(--red); }
 .stat .stat-value { font-family: "Baloo 2", sans-serif; font-size: 1.7rem; font-weight: 800; line-height: 1; }
 .stat .stat-label { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; }
 
@@ -298,14 +299,18 @@ code { background: #f4ecdd; padding: 0.05rem 0.35rem; border-radius: 6px; font-s
 .badge.soft.awaiting { background: var(--blue-soft); color: var(--blue); }
 .badge.soft.pending  { background: var(--amber-soft); color: var(--amber); }
 .badge.soft.rejected { background: var(--red-soft); color: var(--red); }
+.badge.soft.refunded { background: #f0e2e2; color: #9a3412; }
+.badge.refunded { background: #9a3412; }
 
 /* ---------- Bars (per-tower chart) ---------- */
 .bar-track {
-  background: #f1e6d3; border-radius: 999px; height: 12px; overflow: hidden; flex: 1;
+  background: #faf4ea; border: 1px solid #efe4cf; border-radius: 999px;
+  height: 14px; overflow: hidden; flex: 1;
 }
 .bar-fill {
-  height: 100%; border-radius: 999px;
-  background: linear-gradient(90deg, #15803d, #22a155);
+  display: block;
+  height: 100%; border-radius: 999px; min-width: 0;
+  background: linear-gradient(90deg, #ea580c, #f59e0b);
   transition: width 0.4s ease;
 }
 .bar-row { display: grid; grid-template-columns: 96px 1fr auto; gap: 0.6rem; align-items: center; margin: 0.4rem 0; }
@@ -318,6 +323,7 @@ code { background: #f4ecdd; padding: 0.05rem 0.35rem; border-radius: 6px; font-s
 .tbl th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
 .tbl tbody tr:last-child td { border-bottom: none; }
 .tbl td:last-child, .tbl th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.tbl tfoot th { text-transform: none; color: var(--text); font-family: "Baloo 2", sans-serif; font-size: 0.95rem; border-top: 2px solid var(--line-strong); border-bottom: none; }
 
 /* ---------- Flat status pills ---------- */
 .flat-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
@@ -339,6 +345,32 @@ code { background: #f4ecdd; padding: 0.05rem 0.35rem; border-radius: 6px; font-s
 .auth-page h1 { font-size: 2.2rem; margin-bottom: 0.2rem; }
 .auth-page .card { text-align: left; }
 .auth-page form button { width: 100%; }
+
+.or-divider {
+  display: flex; align-items: center; gap: 0.6rem;
+  margin: 0.9rem 0 0.2rem; color: var(--muted); font-size: 0.82rem;
+}
+.or-divider::before, .or-divider::after {
+  content: ""; flex: 1; height: 1px; background: var(--line);
+}
+.seg {
+  display: flex; gap: 0.25rem; background: #f1e6d3; border-radius: 999px;
+  padding: 0.25rem; margin: 0 auto 0.6rem; max-width: 280px;
+}
+.seg button {
+  flex: 1; margin: 0; padding: 0.45rem 0.8rem; border-radius: 999px;
+  background: transparent; color: var(--muted); box-shadow: none; font-weight: 700;
+}
+.seg button.on { background: #fff; color: var(--amber); box-shadow: var(--shadow); }
+.seg button:hover { transform: none; }
+
+.google-btn {
+  display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+  width: 100%;
+  background: #fff; color: var(--text);
+  border: 1.5px solid var(--line-strong); box-shadow: none;
+}
+.google-btn:hover:not(:disabled) { background: #fffaf3; border-color: var(--line-strong); transform: none; }
 
 .center { padding: 3rem; text-align: center; color: var(--muted); }
 

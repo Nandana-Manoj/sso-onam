@@ -4,6 +4,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { formatINR } from '../../lib/format';
 import { buildUpiLink, saveImage } from '../../lib/ui';
 import { CopyIcon, CheckIcon, DownloadIcon } from '../../components/Icons';
+import Modal from '../../components/Modal';
 import type { Contribution, EventConfig } from '../../lib/types';
 
 const LIVE: Contribution['status'][] = ['payment_pending', 'submitted', 'verified'];
@@ -25,6 +26,8 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
   const [amount, setAmount] = useState(String(event.min_contribution));
   const [amountPaid, setAmountPaid] = useState('');
   const [utr, setUtr] = useState('');
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundReason, setRefundReason] = useState('');
 
   const load = useCallback(async () => {
     if (!profile?.flat_id) {
@@ -127,9 +130,25 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
     }
   }
 
+  async function requestRefund() {
+    if (!contribution) return;
+    setError(null);
+    setBusy(true);
+    const { error: e1 } = await supabase.rpc('request_refund', {
+      p_contribution_id: contribution.id,
+      p_reason: refundReason.trim() || null,
+    });
+    setBusy(false);
+    setRefundOpen(false);
+    setRefundReason('');
+    if (e1) setError(e1.message);
+    else load();
+  }
+
   if (loading) return <div className="card"><h3>Contribution</h3><p className="muted">Loading…</p></div>;
 
-  const live = contribution && LIVE.includes(contribution.status);
+  // a refunded contribution frees the flat to contribute again
+  const live = !!contribution && LIVE.includes(contribution.status) && contribution.refund_state !== 'refunded';
 
   return (
     <div className="card">
@@ -143,6 +162,9 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
               Your previous attempt was rejected
               {contribution.decision_reason ? `: ${contribution.decision_reason}` : ''}. You can try again.
             </p>
+          )}
+          {contribution?.refund_state === 'refunded' && (
+            <p className="success">Your earlier contribution was refunded. You can contribute again below.</p>
           )}
           <p className="muted">
             One contribution per flat. Minimum {formatINR(event.min_contribution)}. Any flat member can pay.
@@ -194,7 +216,7 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
                   tn: `${event.name} contribution`,
                 })}
               >
-                Pay {formatINR(Number(amountPaid) || contribution.amount)} in your UPI app
+                Click here to pay Rs. {(Number(amountPaid) || contribution.amount).toLocaleString('en-IN')} towards {event.name}
               </a>
             )}
 
@@ -247,14 +269,38 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
         </p>
       )}
 
-      {/* Verified */}
-      {contribution?.status === 'verified' && (
-        <p className="success">
-          ✓ Received Rs. {(contribution.amount_paid ?? contribution.amount).toLocaleString('en-IN')} towards {event.name}. Thank you!
-        </p>
+      {/* Verified (and not refunded) */}
+      {contribution?.status === 'verified' && contribution.refund_state !== 'refunded' && (
+        <>
+          <p className="success">
+            ✓ Received Rs. {(contribution.amount_paid ?? contribution.amount).toLocaleString('en-IN')} towards {event.name}. Thank you!
+          </p>
+          {contribution.refund_state === 'requested' ? (
+            <p className="muted">Refund requested — your tower rep will pay you back and confirm it.</p>
+          ) : (
+            <button type="button" className="danger-btn" onClick={() => setRefundOpen(true)}>
+              Cancel &amp; request refund
+            </button>
+          )}
+        </>
       )}
 
       {error && <p className="error">{error}</p>}
+
+      {refundOpen && (
+        <Modal title="Cancel & request a refund?" onClose={() => setRefundOpen(false)}>
+          <p className="muted">
+            Your tower rep will pay you back and confirm it. Once refunded, this contribution no longer counts and your flat can contribute again.
+          </p>
+          <label>Reason (optional)
+            <input value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="e.g. paid twice by mistake" />
+          </label>
+          <div className="row">
+            <button className="danger-btn" disabled={busy} onClick={requestRefund}>Request refund</button>
+            <button className="secondary" onClick={() => setRefundOpen(false)}>Keep contribution</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

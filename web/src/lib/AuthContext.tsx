@@ -9,6 +9,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import type { Profile } from './types';
 import { toE164, mobileToEmail } from './format';
+import { OTP_ENABLED } from './config';
 
 interface RegisterArgs {
   name: string;
@@ -22,8 +23,15 @@ interface AuthState {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  otpEnabled: boolean;
   signIn: (mobile: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   register: (args: RegisterArgs) => Promise<void>;
+  // phone-OTP mode (VITE_ENABLE_OTP=true)
+  startPhoneSignup: (mobile: string, password: string) => Promise<void>;
+  completePhoneSignup: (args: RegisterArgs, token: string) => Promise<void>;
+  startOtpLogin: (mobile: string) => Promise<void>;
+  verifyOtpLogin: (mobile: string, token: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -69,9 +77,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function signIn(mobile: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: mobileToEmail(mobile),
-      password,
+    const { error } = OTP_ENABLED
+      ? await supabase.auth.signInWithPassword({ phone: toE164(mobile), password })
+      : await supabase.auth.signInWithPassword({ email: mobileToEmail(mobile), password });
+    if (error) throw error;
+  }
+
+  // --- phone-OTP mode helpers (used when OTP_ENABLED) ---
+  async function startPhoneSignup(mobile: string, password: string) {
+    // creates a phone-keyed user and triggers an OTP via the Send-SMS hook
+    const { error } = await supabase.auth.signUp({ phone: toE164(mobile), password });
+    if (error) throw error;
+  }
+
+  async function completePhoneSignup(args: RegisterArgs, token: string) {
+    const phone = toE164(args.mobile);
+    const { data, error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
+    if (error) throw error;
+    if (!data.session) throw new Error('Could not verify the code. Please try again.');
+    const { error: rpcError } = await supabase.rpc('complete_registration', {
+      p_name: args.name,
+      p_mobile: phone,
+      p_tower_id: args.towerId,
+      p_flat_number: args.flatNumber,
+    });
+    if (rpcError) throw rpcError;
+    await loadProfile(data.session.user.id);
+  }
+
+  async function startOtpLogin(mobile: string) {
+    const { error } = await supabase.auth.signInWithOtp({ phone: toE164(mobile) });
+    if (error) throw error;
+  }
+
+  async function verifyOtpLogin(mobile: string, token: string) {
+    const { error } = await supabase.auth.verifyOtp({ phone: toE164(mobile), token, type: 'sms' });
+    if (error) throw error;
+  }
+
+  async function signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
     });
     if (error) throw error;
   }
@@ -109,7 +156,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, profile, loading, signIn, register, signOut, refreshProfile }}
+      value={{
+        session, profile, loading, otpEnabled: OTP_ENABLED,
+        signIn, signInWithGoogle, register,
+        startPhoneSignup, completePhoneSignup, startOtpLogin, verifyOtpLogin,
+        signOut, refreshProfile,
+      }}
     >
       {children}
     </AuthContext.Provider>

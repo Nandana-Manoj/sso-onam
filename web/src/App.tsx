@@ -3,6 +3,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import RoleHome from './components/RoleHome';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import Onboarding from './pages/auth/Onboarding';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResidentHome from './pages/resident/ResidentHome';
 import RepHome from './pages/rep/RepHome';
@@ -21,6 +22,7 @@ export default function App() {
       {/* Public */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/forgot" element={<ForgotPassword />} />
 
       {/* Authenticated (any role) */}

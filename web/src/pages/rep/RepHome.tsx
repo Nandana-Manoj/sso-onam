@@ -25,6 +25,8 @@ interface ContribRow {
   amount_paid: number | null;
   utr: string | null;
   payment_submitted_at: string | null;
+  refund_state: 'requested' | 'refunded' | null;
+  refund_reason: string | null;
   flats: { flat_number: string } | null;
 }
 
@@ -76,7 +78,7 @@ export default function RepHome() {
       supabase.from('flats').select('id, tower_id, flat_number').in('tower_id', ids).order('flat_number'),
       supabase
         .from('contributions')
-        .select('id, flat_id, paid_to_tower_id, status, amount, amount_paid, utr, payment_submitted_at, flats(flat_number)')
+        .select('id, flat_id, paid_to_tower_id, status, amount, amount_paid, utr, payment_submitted_at, refund_state, refund_reason, flats(flat_number)')
         .in('paid_to_tower_id', ids)
         .order('payment_submitted_at', { ascending: true }),
     ]);
@@ -141,10 +143,21 @@ export default function RepHome() {
   }
 
   const queue = contribs.filter((c) => c.status === 'submitted');
+  const refundQueue = contribs.filter((c) => c.refund_state === 'requested');
   const overviewContribs: OverviewContrib[] = contribs.map((c) => ({
     flat_id: c.flat_id, paid_to_tower_id: c.paid_to_tower_id,
-    status: c.status, amount: c.amount, amount_paid: c.amount_paid,
+    status: c.status, amount: c.amount, amount_paid: c.amount_paid, refund_state: c.refund_state,
   }));
+
+  async function processRefund(row: ContribRow, approve: boolean) {
+    setError(null);
+    setBusyId(row.id);
+    const { error: e } = await supabase.rpc('process_refund', {
+      p_contribution_id: row.id, p_approve: approve, p_reason: null,
+    });
+    setBusyId(null);
+    if (e) setError(e.message); else loadData();
+  }
 
   if (loading) return <div className="page"><p className="muted">Loading…</p></div>;
 
@@ -224,6 +237,30 @@ export default function RepHome() {
         <p className="muted">For residents who paid you directly without using the app. This marks the flat as paid (verified).</p>
         <OfflinePaymentForm towers={towers} onRecorded={loadData} />
       </div>
+
+      {refundQueue.length > 0 && (
+        <>
+          <div className="section-title"><h3>Refund requests</h3>
+            <span className="badge rejected">{refundQueue.length}</span>
+          </div>
+          <ul className="list">
+            {refundQueue.map((row) => (
+              <li key={row.id} className="card card-accent">
+                <p style={{ margin: '0 0 0.3rem' }}>
+                  <strong>{towerName(row.paid_to_tower_id)} · Flat {row.flats?.flat_number ?? '—'}</strong>
+                  {' '}· refund <strong>{formatINR(row.amount_paid ?? row.amount)}</strong>
+                </p>
+                {row.refund_reason && <p className="muted" style={{ margin: '0 0 0.4rem' }}>Reason: {row.refund_reason}</p>}
+                <p className="muted" style={{ margin: '0 0 0.4rem' }}>Pay the resident back, then mark it refunded.</p>
+                <div className="row">
+                  <button className="success-btn" disabled={busyId === row.id} onClick={() => processRefund(row, true)}>Mark refunded</button>
+                  <button className="danger-btn" disabled={busyId === row.id} onClick={() => processRefund(row, false)}>Decline</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <div className="section-title"><h3>Your towers</h3></div>
       <ContributionOverview towers={towers} flats={flats} contribs={overviewContribs} />
