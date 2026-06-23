@@ -33,7 +33,7 @@ export default function AdminDashboard() {
     if (event) {
       const { data: c, error: e } = await supabase
         .from('contributions')
-        .select('flat_id, paid_to_tower_id, status, amount, amount_paid, refund_state')
+        .select('id, flat_id, paid_to_tower_id, status, amount, amount_paid, refund_state')
         .eq('event_id', event.id);
       if (e) setError(e.message);
       setContribs((c as OverviewContrib[]) ?? []);

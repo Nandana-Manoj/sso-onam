@@ -145,7 +145,7 @@ export default function RepHome() {
   const queue = contribs.filter((c) => c.status === 'submitted');
   const refundQueue = contribs.filter((c) => c.refund_state === 'requested');
   const overviewContribs: OverviewContrib[] = contribs.map((c) => ({
-    flat_id: c.flat_id, paid_to_tower_id: c.paid_to_tower_id,
+    id: c.id, flat_id: c.flat_id, paid_to_tower_id: c.paid_to_tower_id,
     status: c.status, amount: c.amount, amount_paid: c.amount_paid, refund_state: c.refund_state,
   }));
 
