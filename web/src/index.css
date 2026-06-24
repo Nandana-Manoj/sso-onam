@@ -224,6 +224,27 @@ input:focus, select:focus {
 }
 input[type="file"] { padding: 0.45rem; background: #fffdf9; cursor: pointer; }
 
+/* Locked (non-editable) fields read clearly as locked: muted, dashed, no caret. */
+input:disabled, input[readonly] {
+  background: #f1ede6;
+  color: var(--muted);
+  cursor: not-allowed;
+  border-style: dashed;
+}
+.lock-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.04rem 0.45rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: #ece7df;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
 button {
   margin-top: 0.7rem;
   padding: 0.65rem 1.1rem;

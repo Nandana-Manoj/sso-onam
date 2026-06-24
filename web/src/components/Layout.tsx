@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { assetUrl, prettyRole } from '../lib/ui';
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const { profile, signOut } = useAuth();
+  const { profile } = useAuth();
   const [logo, setLogo] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string | null>(null);
   const [flatInfo, setFlatInfo] = useState<{ flat: string; tower: string } | null>(null);
@@ -25,7 +25,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   // Flat + tower read from the flat itself (source of truth — never drifts).
   useEffect(() => {
-    if (!profile?.flat_id) { setFlatInfo(null); return; }
+    if (!profile?.flat_id) return;
     supabase
       .from('flats')
       .select('flat_number, towers(name)')
@@ -67,9 +67,9 @@ export default function Layout({ children }: { children: ReactNode }) {
           </span>
         )}
         {profile && (
-          <button className="link-btn" onClick={() => signOut()}>
-            Logout
-          </button>
+          <NavLink to="/profile" className={({ isActive }) => `link-btn${isActive ? ' active' : ''}`}>
+            Profile
+          </NavLink>
         )}
       </header>
       <main className="app-main">{children}</main>

@@ -4,6 +4,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { formatINR } from '../../lib/format';
 import { assetUrl, byName } from '../../lib/ui';
 import OfflinePaymentForm from '../../components/OfflinePaymentForm';
+import CorrectionRequestsPanel from '../../components/CorrectionRequestsPanel';
 import ContributionOverview, {
   type OverviewContrib, type OverviewFlat, type OverviewTower,
 } from '../../components/ContributionOverview';
@@ -261,6 +262,8 @@ export default function RepHome() {
           </ul>
         </>
       )}
+
+      <CorrectionRequestsPanel />
 
       <div className="section-title"><h3>Your towers</h3></div>
       <ContributionOverview towers={towers} flats={flats} contribs={overviewContribs} />

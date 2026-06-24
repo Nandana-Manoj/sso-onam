@@ -3,6 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { GoogleMark } from '../../components/Icons';
+import { toE164 } from '../../lib/format';
+import {
+  firebaseEnabled,
+  sendPhoneOtp,
+  confirmPhoneOtp,
+  resetPhoneVerifier,
+} from '../../lib/firebase';
+import type { ConfirmationResult } from 'firebase/auth';
 import type { PublicTower } from '../../lib/types';
 
 export default function Register() {
@@ -17,6 +25,12 @@ export default function Register() {
   const [code, setCode] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Firebase phone-verification handle (set after the OTP is sent).
+  const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
+
+  // Whether phone verification gates this signup. Firebase is preferred; the
+  // older Supabase-OTP path stays as a fallback when only that is configured.
+  const phoneVerify = firebaseEnabled || otpEnabled;
 
   useEffect(() => {
     supabase.from('public_towers').select('*').order('name').then(({ data, error }) => {
@@ -33,8 +47,12 @@ export default function Register() {
     e.preventDefault();
     setErr(null); setBusy(true);
     try {
-      if (otpEnabled) {
-        await startPhoneSignup(form.mobile, form.password); // sends OTP
+      if (firebaseEnabled) {
+        const result = await sendPhoneOtp(toE164(form.mobile), 'recaptcha-register');
+        setConfirmation(result);
+        setStep('otp');
+      } else if (otpEnabled) {
+        await startPhoneSignup(form.mobile, form.password); // sends OTP via Supabase hook
         setStep('otp');
       } else {
         await register(form);
@@ -47,12 +65,27 @@ export default function Register() {
   async function onVerify(e: FormEvent) {
     e.preventDefault();
     setErr(null); setBusy(true);
-    try { await completePhoneSignup(form, code); nav('/'); }
-    catch (e) { setErr((e as Error).message); }
+    try {
+      if (firebaseEnabled) {
+        if (!confirmation) throw new Error('Please request a new code.');
+        // Confirm ownership with Firebase, then create the Supabase account.
+        await confirmPhoneOtp(confirmation, code);
+        await register(form);
+        nav('/');
+      } else {
+        await completePhoneSignup(form, code);
+        nav('/');
+      }
+    } catch (e) { setErr((e as Error).message); }
     finally { setBusy(false); }
   }
 
-  if (otpEnabled && step === 'otp') {
+  function backToForm() {
+    setStep('form'); setCode(''); setConfirmation(null);
+    if (firebaseEnabled) resetPhoneVerifier();
+  }
+
+  if (phoneVerify && step === 'otp') {
     return (
       <div className="auth-page">
         <h1>Verify your number</h1>
@@ -63,8 +96,10 @@ export default function Register() {
           </label>
           {err && <p className="error">{err}</p>}
           <button type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Verify & finish'}</button>
-          <button type="button" className="link-btn" onClick={() => { setStep('form'); setCode(''); }}>Back</button>
+          <button type="button" className="link-btn" onClick={backToForm}>Back</button>
         </form>
+        {/* Invisible reCAPTCHA mount point for Firebase phone auth. */}
+        <div id="recaptcha-register" />
       </div>
     );
   }
@@ -89,7 +124,7 @@ export default function Register() {
         </label>
         {err && <p className="error">{err}</p>}
         <button type="submit" disabled={busy}>
-          {busy ? 'Please wait…' : otpEnabled ? 'Send verification code' : 'Create account'}
+          {busy ? 'Please wait…' : phoneVerify ? 'Send verification code' : 'Create account'}
         </button>
         <div className="or-divider"><span>or</span></div>
         <button
@@ -109,6 +144,9 @@ export default function Register() {
           <GoogleMark /> Continue with Google
         </button>
       </form>
+      {/* Invisible reCAPTCHA mount point (also present on the form step so the
+          first "Send code" click has a target to attach to). */}
+      <div id="recaptcha-register" />
       <p className="muted">Already have an account? <Link to="/login">Log in</Link></p>
     </div>
   );

@@ -32,6 +32,12 @@ interface AuthState {
   completePhoneSignup: (args: RegisterArgs, token: string) => Promise<void>;
   startOtpLogin: (mobile: string) => Promise<void>;
   verifyOtpLogin: (mobile: string, token: string) => Promise<void>;
+  // self-service password reset gated by a Firebase phone-verification token
+  resetPasswordWithPhone: (idToken: string, newPassword: string) => Promise<void>;
+  // change password while logged in (re-verifies the current password first)
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  // update editable profile fields (name today; mobile/tower/flat are guarded)
+  updateName: (name: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -121,6 +127,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }
 
+  // Forgot-password: the caller has already proven phone ownership via Firebase
+  // (idToken). The edge function verifies that token server-side, derives the
+  // synthetic email from the verified phone, and sets the new password with the
+  // service role. We then sign the user in with the new credentials.
+  async function resetPasswordWithPhone(idToken: string, newPassword: string) {
+    const { data, error } = await supabase.functions.invoke('phone-reset', {
+      body: { idToken, newPassword },
+    });
+    if (error) {
+      // On a non-2xx, supabase-js gives a generic message and stashes the actual
+      // Response on error.context — read the function's JSON {error} from there.
+      let msg = error.message;
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          const body = await ctx.json();
+          if (body?.error) msg = body.error as string;
+        } catch { /* response wasn't JSON — keep the generic message */ }
+      }
+      throw new Error(msg);
+    }
+    const phone = (data as { phone?: string } | null)?.phone;
+    if (!phone) throw new Error('Reset failed: no account matched that number.');
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: mobileToEmail(phone),
+      password: newPassword,
+    });
+    if (signInError) throw signInError;
+  }
+
+  // Change password for a logged-in user. We re-verify the current password first
+  // (Supabase's updateUser doesn't require it, but we want that confirmation) and
+  // then update. Note: Google-only accounts have no password to verify.
+  async function changePassword(currentPassword: string, newPassword: string) {
+    if (!profile?.mobile) throw new Error('You must be signed in to change your password.');
+    const { error: reauthError } = OTP_ENABLED
+      ? await supabase.auth.signInWithPassword({ phone: toE164(profile.mobile), password: currentPassword })
+      : await supabase.auth.signInWithPassword({ email: mobileToEmail(profile.mobile), password: currentPassword });
+    if (reauthError) throw new Error('Current password is incorrect.');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  }
+
+  // Update the display name on the user's own profile. RLS permits a self-update;
+  // the identity guard only blocks role/tower/flat, so name goes through.
+  async function updateName(name: string) {
+    if (!session) throw new Error('You must be signed in.');
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error('Name cannot be empty.');
+    const { error } = await supabase
+      .from('profiles')
+      .update({ name: trimmed })
+      .eq('id', session.user.id);
+    if (error) throw error;
+    await loadProfile(session.user.id);
+  }
+
   async function signInWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -166,6 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session, profile, loading, otpEnabled: OTP_ENABLED,
         signIn, signInWithGoogle, register,
         startPhoneSignup, completePhoneSignup, startOtpLogin, verifyOtpLogin,
+        resetPasswordWithPhone, changePassword, updateName,
         signOut, refreshProfile,
       }}
     >

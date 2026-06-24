@@ -5,6 +5,7 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Onboarding from './pages/auth/Onboarding';
 import ForgotPassword from './pages/auth/ForgotPassword';
+import Profile from './pages/Profile';
 import ResidentHome from './pages/resident/ResidentHome';
 import RepHome from './pages/rep/RepHome';
 import AdminHome from './pages/admin/AdminHome';
@@ -29,6 +30,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<RoleHome />} />
         <Route path="/home" element={<ResidentHome />} />
+        <Route path="/profile" element={<Profile />} />
       </Route>
 
       {/* Tower Rep + Admin */}
