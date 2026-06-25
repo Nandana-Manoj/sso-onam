@@ -53,6 +53,9 @@ function getVerifier(containerId: string): RecaptchaVerifier {
     try { verifier.clear(); } catch { /* ignore */ }
     verifier = null;
   }
+  // Invisible reCAPTCHA. NOTE: on localhost an invisible token is rejected by the
+  // backend (auth/invalid-app-credential — a known Firebase SDK issue), so verify
+  // real numbers on the deployed domain; use Firebase test numbers on localhost.
   verifier = new RecaptchaVerifier(getFbAuth(), containerId, { size: 'invisible' });
   verifierContainerId = containerId;
   return verifier;
