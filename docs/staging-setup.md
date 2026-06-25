@@ -29,9 +29,9 @@ After this: `main` and `staging` both exist on GitHub with identical content.
 - Save the **database password** somewhere safe.
 
 ### 2b. Apply the schema
-- Open the SQL editor. Run the **17 migration files** from `supabase/migrations/` **in
-  filename order** (they're timestamp-prefixed, so top-to-bottom). One file at a time,
-  check each succeeds before the next. This is the same manual process as prod.
+- Open the SQL editor and run the **18 migration files** from `supabase/migrations/` **in
+  filename order**. Fastest: paste the single combined file `supabase/_bootstrap_all_migrations.sql`
+  (all 18 concatenated in order) and run once. This is the same schema as prod.
 
 ### 2c. Auth settings (Authentication → Providers / Settings)
 - **Email** provider: enabled.
@@ -39,13 +39,9 @@ After this: `main` and `staging` both exist on GitHub with identical content.
   session immediately (see `Register.tsx`). If this is on, registration breaks.
 - Site URL / Redirect URLs: leave for now — fill in after Step 4 gives you the staging URL.
 
-### 2d. Storage (Storage → Buckets)
-- Recreate the two buckets that exist in prod, with the **same public/private setting and
-  the same policies**:
-  - `rep-qr` — rep payment QR images
-  - `event-assets` — event logo
-- Easiest: open prod's Storage settings side-by-side and mirror each bucket's config +
-  policies. (Seed data doesn't need storage, but UAT of QR/logo upload does.)
+### 2d. Storage — nothing to do ✅
+- The migrations already create both buckets and their policies (`rep-qr` in `phase1_03`,
+  `event-assets` in `phase1_04`). No manual step needed; they exist after the migration run.
 
 ### 2e. Edge function: `phone-reset` (optional — only for self-service password reset)
 - Deploy `supabase/functions/phone-reset` to the staging project.
