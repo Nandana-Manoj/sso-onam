@@ -162,8 +162,10 @@ the dangerous branch. Solo, the goal is just to stop *your own* slips:
 
 - Always flow **forward** (`feature → staging → main`). Never commit features straight to
   `main`.
-- Optionally enable a light GitHub branch rule on `main` (no force-push; require the
-  change to arrive via PR) — a guardrail against an absent-minded direct push.
+- Optionally enable a light GitHub branch rule on `main` (no force-push; restrict
+  deletions) — a guardrail against an absent-minded direct push. For the full
+  PR-only lockdown ("changes go to staging only"), see
+  [release-hardening-later.md](release-hardening-later.md) — **deferred until post-launch.**
 - If you ever hotfix `main` directly in an emergency, **back-merge `main → staging`**
   right after so staging doesn't drift behind prod.
 
