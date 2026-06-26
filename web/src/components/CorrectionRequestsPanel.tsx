@@ -55,7 +55,7 @@ export default function CorrectionRequestsPanel() {
 
   return (
     <>
-      <div className="section-title"><h3>Tower / flat change requests</h3>
+      <div className="section-title"><h3>Tower / Flat Change Requests</h3>
         {rows.length > 0 && <span className="badge awaiting">{rows.length}</span>}
       </div>
       {rows.length === 0 ? (
@@ -84,7 +84,7 @@ export default function CorrectionRequestsPanel() {
       {error && <p className="error">{error}</p>}
 
       {rejecting && (
-        <Modal title="Reject this request?" onClose={() => setRejecting(null)}>
+        <Modal title="Reject This Request?" onClose={() => setRejecting(null)}>
           <p className="muted">
             {rejecting.resident_name} — {(rejecting.requested_tower ?? rejecting.current_tower) ?? '—'} · Flat {rejecting.requested_flat ?? '—'}
           </p>
@@ -92,7 +92,7 @@ export default function CorrectionRequestsPanel() {
             <input autoFocus value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Flat already occupied" />
           </label>
           <div className="row">
-            <button className="danger-btn" disabled={busyId === rejecting.id} onClick={confirmReject}>Reject request</button>
+            <button className="danger-btn" disabled={busyId === rejecting.id} onClick={confirmReject}>Reject Request</button>
             <button className="secondary" onClick={() => setRejecting(null)}>Cancel</button>
           </div>
         </Modal>

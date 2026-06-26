@@ -102,13 +102,19 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
     }
   }
 
+  // Friendly wording for the one error residents actually hit — paying below the
+  // event minimum. Replaces the raw "Amount must be at least 2000.00" from the DB.
+  const belowMinMsg = `The minimum contribution is ${formatINR(event.min_contribution)}. Please enter ${formatINR(event.min_contribution)} or more.`;
+  const niceError = (msg: string) => (/at least/i.test(msg) ? belowMinMsg : msg);
+
   async function startContribution(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (Number(amount) < event.min_contribution) { setError(belowMinMsg); return; }
     setBusy(true);
     const { error: e1 } = await supabase.rpc('create_contribution', { p_amount: Number(amount) });
     setBusy(false);
-    if (e1) setError(e1.message);
+    if (e1) setError(niceError(e1.message));
     else load();
   }
 
@@ -116,14 +122,16 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
     e.preventDefault();
     if (!contribution) return;
     setError(null);
+    const paid = Number(amountPaid) || contribution.amount;
+    if (paid < event.min_contribution) { setError(belowMinMsg); return; }
     setBusy(true);
     const { error: e1 } = await supabase.rpc('submit_contribution_payment', {
       p_contribution_id: contribution.id,
-      p_amount_paid: Number(amountPaid) || contribution.amount,
+      p_amount_paid: paid,
       p_utr: utr.trim() || null,
     });
     setBusy(false);
-    if (e1) setError(e1.message);
+    if (e1) setError(niceError(e1.message));
     else {
       setUtr('');
       load();
@@ -152,7 +160,7 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
 
   return (
     <div className="card">
-      <h3>Flat contribution</h3>
+      <h3>Flat Contribution</h3>
 
       {/* No live contribution → start one */}
       {!live && (
@@ -174,14 +182,14 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
               Amount (₹)
               <input
                 type="number"
-                min={event.min_contribution}
+                min={0}
                 step="1"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 required
               />
             </label>
-            <button type="submit" disabled={busy}>Start contribution</button>
+            <button type="submit" disabled={busy}>Start Contribution</button>
           </form>
         </>
       )}
@@ -193,12 +201,12 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
             Pledged: <strong>{formatINR(contribution.amount)}</strong> — pay your tower rep, then submit below.
           </p>
           <div className="card">
-            <strong>Pay your tower rep{repContact ? ` · ${repContact}` : ''}</strong>
+            <strong>Pay Your Tower Rep{repContact ? ` · ${repContact}` : ''}</strong>
 
-            <label>Amount to pay (₹)
+            <label>Amount to Pay (₹)
               <input
                 type="number"
-                min={event.min_contribution}
+                min={0}
                 step="1"
                 value={amountPaid}
                 onChange={(e) => setAmountPaid(e.target.value)}
@@ -224,7 +232,7 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
             {repPhone && (
               <div className="row" style={{ marginTop: '0.6rem' }}>
                 <span style={{ flex: 1 }}>Or pay this number: <strong>{repPhone}</strong></span>
-                <button type="button" className="icon-btn" title="Copy number" onClick={copyPhone}>
+                <button type="button" className="icon-btn" title="Copy Number" onClick={copyPhone}>
                   {copied ? <CheckIcon /> : <CopyIcon />}
                 </button>
               </div>
@@ -233,14 +241,14 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
             {/* 3. QR in a toggle (closed by default) */}
             {repQrUrl && (
               <details className="disclosure" style={{ marginTop: '0.6rem' }}>
-                <summary>Show QR to scan</summary>
+                <summary>Show QR to Scan</summary>
                 <img
                   src={repQrUrl}
                   alt="Tower rep UPI QR"
                   style={{ maxWidth: 240, border: '1px solid var(--line)', borderRadius: 10, display: 'block', marginTop: '0.5rem' }}
                 />
                 <button type="button" className="secondary icon-text" disabled={savingQr} onClick={saveQr}>
-                  <DownloadIcon /> {savingQr ? 'Saving…' : 'Save QR to phone'}
+                  <DownloadIcon /> {savingQr ? 'Saving…' : 'Save QR to Phone'}
                 </button>
               </details>
             )}
@@ -279,7 +287,7 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
             <p className="muted">Refund requested — your tower rep will pay you back and confirm it.</p>
           ) : (
             <button type="button" className="danger-btn" onClick={() => setRefundOpen(true)}>
-              Cancel &amp; request refund
+              Cancel &amp; Request Refund
             </button>
           )}
         </>
@@ -288,7 +296,7 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
       {error && <p className="error">{error}</p>}
 
       {refundOpen && (
-        <Modal title="Cancel & request a refund?" onClose={() => setRefundOpen(false)}>
+        <Modal title="Cancel & Request a Refund?" onClose={() => setRefundOpen(false)}>
           <p className="muted">
             Your tower rep will pay you back and confirm it. Once refunded, this contribution no longer counts and your flat can contribute again.
           </p>
@@ -296,8 +304,8 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
             <input value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="e.g. paid twice by mistake" />
           </label>
           <div className="row">
-            <button className="danger-btn" disabled={busy} onClick={requestRefund}>Request refund</button>
-            <button className="secondary" onClick={() => setRefundOpen(false)}>Keep contribution</button>
+            <button className="danger-btn" disabled={busy} onClick={requestRefund}>Request Refund</button>
+            <button className="secondary" onClick={() => setRefundOpen(false)}>Keep Contribution</button>
           </div>
         </Modal>
       )}

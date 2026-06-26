@@ -49,16 +49,16 @@ export default function ResidentHome() {
         <>
           <div className="hero">
             {logo && <img className="hero-logo" src={logo} alt="" />}
-            <h2>Onam greetings, {profile?.name?.split(' ')[0]}! 🌼</h2>
+            <h2>Onam Greetings, {profile?.name?.split(' ')[0]}! 🌼</h2>
             <p className="hero-sub">
-              {event.name} · minimum {formatINR(event.min_contribution)} per flat · sadya {formatINR(event.adult_sadya_price)}/adult
+              {event.name} · Minimum {formatINR(event.min_contribution)} per flat · Sadya {formatINR(event.adult_sadya_price)}/adult
             </p>
           </div>
 
           <ContributionPanel event={event} />
 
           <div className="card">
-            <h3>Your tower rep</h3>
+            <h3>Your Tower Rep</h3>
             {repContact
               ? <p style={{ margin: 0 }}>{repContact}</p>
               : <p className="muted" style={{ margin: 0 }}>Your tower's rep hasn't added their contact yet.</p>}

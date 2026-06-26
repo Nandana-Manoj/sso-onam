@@ -47,14 +47,14 @@ export default function Layout({ children }: { children: ReactNode }) {
 
         {profile?.role === 'tower_rep' && (
           <nav className="head-nav">
-            <NavLink to="/rep" className={({ isActive }) => (isActive ? 'active' : '')}>Rep tools</NavLink>
-            <NavLink to="/home" className={({ isActive }) => (isActive ? 'active' : '')}>My flat</NavLink>
+            <NavLink to="/rep" className={({ isActive }) => (isActive ? 'active' : '')}>Rep Tools</NavLink>
+            <NavLink to="/home" className={({ isActive }) => (isActive ? 'active' : '')}>My Flat</NavLink>
           </nav>
         )}
         {profile?.role === 'admin' && (
           <nav className="head-nav">
             <NavLink to="/admin" className={({ isActive }) => (isActive ? 'active' : '')}>Admin</NavLink>
-            <NavLink to="/home" className={({ isActive }) => (isActive ? 'active' : '')}>My flat</NavLink>
+            <NavLink to="/home" className={({ isActive }) => (isActive ? 'active' : '')}>My Flat</NavLink>
           </nav>
         )}
 

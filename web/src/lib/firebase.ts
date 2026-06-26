@@ -53,10 +53,10 @@ function getVerifier(containerId: string): RecaptchaVerifier {
     try { verifier.clear(); } catch { /* ignore */ }
     verifier = null;
   }
-  // Invisible reCAPTCHA. NOTE: on localhost an invisible token is rejected by the
-  // backend (auth/invalid-app-credential — a known Firebase SDK issue), so verify
-  // real numbers on the deployed domain; use Firebase test numbers on localhost.
-  verifier = new RecaptchaVerifier(getFbAuth(), containerId, { size: 'invisible' });
+  // Visible "I'm not a robot" checkbox. The user ticks it before the OTP is sent.
+  // (An invisible token is rejected on localhost — auth/invalid-app-credential, a
+  // known Firebase SDK issue — so the visible checkbox also eases local testing.)
+  verifier = new RecaptchaVerifier(getFbAuth(), containerId, { size: 'normal' });
   verifierContainerId = containerId;
   return verifier;
 }

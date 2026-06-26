@@ -68,14 +68,14 @@ export default function Login() {
         {/* Password login */}
         {(!otpEnabled || mode === 'password') && (
           <form onSubmit={onPassword}>
-            <label>Mobile number
-              <input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10-digit mobile" required />
+            <label>Mobile Number
+              <input type="tel" name="mobile" autoComplete="username" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10-digit mobile" required />
             </label>
             <label>Password
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" required />
             </label>
             {err && <p className="error">{err}</p>}
-            <button type="submit" disabled={busy}>{busy ? 'Logging in…' : 'Log in'}</button>
+            <button type="submit" disabled={busy}>{busy ? 'Logging In…' : 'Log In'}</button>
           </form>
         )}
 
@@ -83,21 +83,21 @@ export default function Login() {
         {otpEnabled && mode === 'otp' && (
           !otpSent ? (
             <form onSubmit={onSendCode}>
-              <label>Mobile number
-                <input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10-digit mobile" required />
+              <label>Mobile Number
+                <input type="tel" name="mobile" autoComplete="username" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10-digit mobile" required />
               </label>
               {err && <p className="error">{err}</p>}
-              <button type="submit" disabled={busy}>{busy ? 'Sending…' : 'Send code'}</button>
+              <button type="submit" disabled={busy}>{busy ? 'Sending…' : 'Send Code'}</button>
             </form>
           ) : (
             <form onSubmit={onVerify}>
               <p className="muted">We sent a code to {mobile}.</p>
-              <label>Enter code
+              <label>Enter Code
                 <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" required />
               </label>
               {err && <p className="error">{err}</p>}
-              <button type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Verify & log in'}</button>
-              <button type="button" className="link-btn" onClick={() => { setOtpSent(false); setCode(''); }}>Change number</button>
+              <button type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Verify & Log In'}</button>
+              <button type="button" className="link-btn" onClick={() => { setOtpSent(false); setCode(''); }}>Change Number</button>
             </form>
           )
         )}

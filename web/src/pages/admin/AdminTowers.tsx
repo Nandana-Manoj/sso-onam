@@ -41,7 +41,7 @@ export default function AdminTowers() {
       <form onSubmit={onCreate} className="card row">
         <input placeholder="Name (e.g. Tower 1)" value={name} onChange={(e) => setName(e.target.value)} required />
         <input placeholder="Code (optional)" value={code} onChange={(e) => setCode(e.target.value)} />
-        <button type="submit" disabled={busy}>Add tower</button>
+        <button type="submit" disabled={busy}>Add Tower</button>
       </form>
       {msg && <p className="error">{msg}</p>}
       <ul className="list">
@@ -51,7 +51,7 @@ export default function AdminTowers() {
               <strong>{t.name}</strong> {t.code && <span className="muted">({t.code})</span>}
             </span>
             <span className={`badge soft ${t.rep_user_id ? 'verified' : 'rejected'}`}>
-              {t.rep_user_id ? 'Rep assigned' : 'No rep'}
+              {t.rep_user_id ? 'Rep Assigned' : 'No Rep'}
             </span>
           </li>
         ))}

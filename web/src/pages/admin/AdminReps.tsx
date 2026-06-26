@@ -178,16 +178,16 @@ export default function AdminReps() {
                 value={picks[c.id] ?? ''}
                 onChange={(e) => setPicks((p) => ({ ...p, [c.id]: e.target.value }))}
               >
-                <option value="" disabled>Select tower</option>
+                <option value="" disabled>Select Tower</option>
                 {towers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
-              <button onClick={() => assign(c)} disabled={busy || !picks[c.id]}>Make rep</button>
+              <button onClick={() => assign(c)} disabled={busy || !picks[c.id]}>Make Rep</button>
             </div>
           )}
         </div>
       ))}
 
-      <div className="section-title"><h3>Towers &amp; reps</h3></div>
+      <div className="section-title"><h3>Towers &amp; Reps</h3></div>
       <ul className="list">
         {towers.map((t) => {
           const repTallies = tallies(t.id, t.rep_user_id);
@@ -202,7 +202,7 @@ export default function AdminReps() {
                 </div>
                 <span className="row" style={{ gap: '0.4rem' }}>
                   <span className={`badge soft ${t.rep_contact ? 'verified' : 'pending'}`}>
-                    {t.rep_contact ? 'Payment set' : 'No payment'}
+                    {t.rep_contact ? 'Payment Set' : 'No Payment'}
                   </span>
                   {t.rep_user_id && (
                     <button className="danger-btn" disabled={busy} onClick={() => setRemoving(t)}>Remove</button>
@@ -212,12 +212,12 @@ export default function AdminReps() {
 
               {repTallies.length > 0 && (
                 <div style={{ marginTop: '0.6rem' }}>
-                  <p className="muted" style={{ margin: '0 0 0.3rem' }}>Collected (verified) by rep:</p>
+                  <p className="muted" style={{ margin: '0 0 0.3rem' }}>Collected (Verified) by Rep:</p>
                   {repTallies.map((r) => (
                     <div key={r.name} className="between" style={{ padding: '0.15rem 0' }}>
                       <span>
                         {r.name}{' '}
-                        {r.isCurrent ? <span className="badge soft verified">current</span> : <span className="badge soft pending">past</span>}
+                        {r.isCurrent ? <span className="badge soft verified">Current</span> : <span className="badge soft pending">Past</span>}
                       </span>
                       <span><strong>{formatINR(r.amount)}</strong> <span className="muted">· {r.count}</span></span>
                     </div>
@@ -230,12 +230,12 @@ export default function AdminReps() {
       </ul>
 
       {removing && (
-        <Modal title={`Remove the rep for ${removing.name}?`} onClose={() => setRemoving(null)}>
+        <Modal title={`Remove the Rep for ${removing.name}?`} onClose={() => setRemoving(null)}>
           <p className="muted">
             They'll go back to being a resident. Their past verified collections stay recorded and attributed to them.
           </p>
           <div className="row">
-            <button className="danger-btn" disabled={busy} onClick={confirmRemove}>Remove rep</button>
+            <button className="danger-btn" disabled={busy} onClick={confirmRemove}>Remove Rep</button>
             <button className="secondary" onClick={() => setRemoving(null)}>Cancel</button>
           </div>
         </Modal>

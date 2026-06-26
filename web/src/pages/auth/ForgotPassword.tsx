@@ -29,7 +29,7 @@ export default function ForgotPassword() {
   if (!firebaseEnabled) {
     return (
       <div className="auth-page">
-        <h1>Forgot password</h1>
+        <h1>Forgot Password</h1>
         <div className="card">
           <p>
             Password resets are handled by your <strong>Tower Representative</strong> or an{' '}
@@ -84,44 +84,44 @@ export default function ForgotPassword() {
 
   return (
     <div className="auth-page">
-      <h1>Reset your password</h1>
+      <h1>Reset Your Password</h1>
       <div className="card">
         {step === 'mobile' && (
           <form onSubmit={onSendCode}>
             <p className="muted">Enter your mobile number and we’ll send a verification code.</p>
-            <label>Mobile number
-              <input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10-digit mobile" required />
+            <label>Mobile Number
+              <input type="tel" name="mobile" autoComplete="username" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10-digit mobile" required />
             </label>
+            {/* "I'm not a robot" checkbox — tick it before requesting the code. */}
+            <div id="recaptcha-forgot" style={{ marginTop: '0.8rem' }} />
             {err && <p className="error">{err}</p>}
-            <button type="submit" disabled={busy}>{busy ? 'Sending…' : 'Send code'}</button>
+            <button type="submit" disabled={busy}>{busy ? 'Sending…' : 'Send Code'}</button>
           </form>
         )}
 
         {step === 'code' && (
           <form onSubmit={onVerifyCode}>
             <p className="muted">We sent a code to {mobile}.</p>
-            <label>Enter code
+            <label>Enter Code
               <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" required />
             </label>
             {err && <p className="error">{err}</p>}
             <button type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Verify'}</button>
-            <button type="button" className="link-btn" onClick={restart}>Change number</button>
+            <button type="button" className="link-btn" onClick={restart}>Change Number</button>
           </form>
         )}
 
         {step === 'password' && (
           <form onSubmit={onSetPassword}>
             <p className="muted">Number verified. Choose a new password.</p>
-            <label>New password
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required />
+            <label>New Password
+              <input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" minLength={6} required />
             </label>
             {err && <p className="error">{err}</p>}
-            <button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Set password & log in'}</button>
+            <button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Set Password & Log In'}</button>
           </form>
         )}
       </div>
-      {/* Invisible reCAPTCHA mount point for Firebase phone auth. */}
-      <div id="recaptcha-forgot" />
       <p className="muted"><Link to="/login">Back to log in</Link></p>
     </div>
   );

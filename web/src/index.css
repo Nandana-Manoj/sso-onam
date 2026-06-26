@@ -114,6 +114,17 @@ a:hover { text-decoration: underline; }
 }
 .app-header .link-btn:hover { background: rgba(255,255,255,0.28); }
 
+/* Phones: keep everything on screen — nav drops to its own row, the identity
+   block (also shown on the Profile page) is hidden, and Profile stays in view. */
+@media (max-width: 600px) {
+  .app-header { flex-wrap: wrap; gap: 0.45rem 0.6rem; padding: 0.55rem 0.9rem; }
+  .brand { font-size: 1.1rem; }
+  .spacer { display: none; }
+  .who { display: none; }
+  .head-nav { order: 5; flex-basis: 100%; margin-left: 0; justify-content: center; }
+  .app-header .link-btn { margin-left: auto; }
+}
+
 .app-main, .auth-page { max-width: 640px; margin: 0 auto; padding: 1.1rem; }
 .page > h2 { margin-top: 0.3rem; }
 .page-back { display: inline-block; margin-bottom: 0.2rem; font-size: 0.9rem; }
@@ -412,6 +423,7 @@ code { background: #f4ecdd; padding: 0.05rem 0.35rem; border-radius: 6px; font-s
   width: 100%; max-width: 420px;
   animation: pop-in 0.14s ease;
 }
+.modal-card.wide { max-width: 760px; max-height: 88vh; overflow: auto; }
 .modal-card h3 { margin-top: 0; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }

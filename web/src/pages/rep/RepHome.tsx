@@ -174,25 +174,25 @@ export default function RepHome() {
   return (
     <div className="page">
       <div className="hero">
-        <h2>Tower representative</h2>
+        <h2>Tower Representative</h2>
         <p className="hero-sub">
           Managing <strong>{towers.map((t) => t.name).join(', ')}</strong>
         </p>
       </div>
 
       <div className="card card-accent">
-        <h3>Your payment details</h3>
+        <h3>Your Payment Details</h3>
         <p className="muted">Used by residents in <strong>all towers you manage</strong>. Your UPI ID powers the resident's "pay" button but is never shown to them.</p>
         <label>UPI ID (for the pay button — not shown to residents)
           <input placeholder="e.g. ravi@okaxis" value={upiId} onChange={(e) => setUpiId(e.target.value)} />
         </label>
-        <label>Payment mobile number (shown to residents to copy &amp; pay)
+        <label>Payment Mobile Number (shown to residents to copy &amp; pay)
           <input placeholder="e.g. 98765 43210" value={paymentPhone} onChange={(e) => setPaymentPhone(e.target.value)} />
         </label>
-        <label>Your name (shown to residents)
+        <label>Your Name (shown to residents)
           <input placeholder="e.g. Ravi" value={contact} onChange={(e) => setContact(e.target.value)} />
         </label>
-        <label style={{ marginTop: '1rem' }}>UPI QR image (so residents can scan)
+        <label style={{ marginTop: '1rem' }}>UPI QR Image (so residents can scan)
           <input type="file" accept="image/*" disabled={contactBusy} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadQr(f); }} />
         </label>
         {qrUrl && (
@@ -205,7 +205,7 @@ export default function RepHome() {
         {contactMsg && <p className={contactMsg.startsWith('Saved') || contactMsg.startsWith('QR') ? 'success' : 'error'}>{contactMsg}</p>}
       </div>
 
-      <div className="section-title"><h3>Verification queue</h3>
+      <div className="section-title"><h3>Verification Queue</h3>
         {queue.length > 0 && <span className="badge awaiting">{queue.length}</span>}
       </div>
       {queue.length === 0 ? (
@@ -233,15 +233,9 @@ export default function RepHome() {
       )}
       {error && <p className="error">{error}</p>}
 
-      <div className="card card-accent">
-        <h3>Record a walk-in / offline payment</h3>
-        <p className="muted">For residents who paid you directly without using the app. This marks the flat as paid (verified).</p>
-        <OfflinePaymentForm towers={towers} onRecorded={loadData} />
-      </div>
-
       {refundQueue.length > 0 && (
         <>
-          <div className="section-title"><h3>Refund requests</h3>
+          <div className="section-title"><h3>Refund Requests</h3>
             <span className="badge rejected">{refundQueue.length}</span>
           </div>
           <ul className="list">
@@ -254,7 +248,7 @@ export default function RepHome() {
                 {row.refund_reason && <p className="muted" style={{ margin: '0 0 0.4rem' }}>Reason: {row.refund_reason}</p>}
                 <p className="muted" style={{ margin: '0 0 0.4rem' }}>Pay the resident back, then mark it refunded.</p>
                 <div className="row">
-                  <button className="success-btn" disabled={busyId === row.id} onClick={() => processRefund(row, true)}>Mark refunded</button>
+                  <button className="success-btn" disabled={busyId === row.id} onClick={() => processRefund(row, true)}>Mark Refunded</button>
                   <button className="danger-btn" disabled={busyId === row.id} onClick={() => processRefund(row, false)}>Decline</button>
                 </div>
               </li>
@@ -265,11 +259,17 @@ export default function RepHome() {
 
       <CorrectionRequestsPanel />
 
-      <div className="section-title"><h3>Your towers</h3></div>
+      <div className="section-title"><h3>Your Towers</h3></div>
       <ContributionOverview towers={towers} flats={flats} contribs={overviewContribs} />
 
+      <div className="card card-accent">
+        <h3>Record a Walk-In / Offline Payment</h3>
+        <p className="muted">For residents who paid you directly without using the app. This marks the flat as paid (verified).</p>
+        <OfflinePaymentForm towers={towers} onRecorded={loadData} />
+      </div>
+
       {rejecting && (
-        <Modal title="Reject this payment?" onClose={() => setRejecting(null)}>
+        <Modal title="Reject This Payment?" onClose={() => setRejecting(null)}>
           <p className="muted">
             {towerName(rejecting.paid_to_tower_id)} · Flat {rejecting.flats?.flat_number ?? '—'} · {formatINR(rejecting.amount_paid ?? rejecting.amount)}
           </p>
@@ -277,7 +277,7 @@ export default function RepHome() {
             <input autoFocus value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="e.g. Payment not received" />
           </label>
           <div className="row">
-            <button className="danger-btn" disabled={busyId === rejecting.id} onClick={confirmReject}>Reject payment</button>
+            <button className="danger-btn" disabled={busyId === rejecting.id} onClick={confirmReject}>Reject Payment</button>
             <button className="secondary" onClick={() => setRejecting(null)}>Cancel</button>
           </div>
         </Modal>

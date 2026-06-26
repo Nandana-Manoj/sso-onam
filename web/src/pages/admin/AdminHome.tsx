@@ -27,7 +27,7 @@ export default function AdminHome() {
       <div className="section-title"><h3>Setup</h3></div>
       <div className="grid cols-2">
         <Link to="/admin/events" className="card link-card">
-          <h3>🎏 Events &amp; config</h3>
+          <h3>🎏 Events &amp; Config</h3>
           <p className="muted">Set prices, the active event, and the event logo.</p>
         </Link>
         <Link to="/admin/towers" className="card link-card">

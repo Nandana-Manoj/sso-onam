@@ -49,18 +49,18 @@ export default function OfflinePaymentForm({
       {towers && (
         <label>Tower
           <select value={selTower} onChange={(e) => setSelTower(e.target.value)} required>
-            <option value="" disabled>Select tower</option>
+            <option value="" disabled>Select Tower</option>
             {towers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </label>
       )}
       <div className="grid cols-2">
-        <label>Flat number<input value={flat} onChange={(e) => setFlat(e.target.value)} required /></label>
+        <label>Flat Number<input value={flat} onChange={(e) => setFlat(e.target.value)} required /></label>
         <label>Amount (₹)<input type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} required /></label>
       </div>
-      <label>UTR / reference (optional)<input value={utr} onChange={(e) => setUtr(e.target.value)} placeholder="UPI ref, if any" /></label>
+      <label>UTR / Reference (optional)<input value={utr} onChange={(e) => setUtr(e.target.value)} placeholder="UPI ref, if any" /></label>
       <label>Note (optional)<input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. paid cash in person" /></label>
-      <button type="submit" disabled={busy || !tower}>Record payment</button>
+      <button type="submit" disabled={busy || !tower}>Record Payment</button>
       {msg && <p className={msg.startsWith('Recorded') ? 'success' : 'error'}>{msg}</p>}
     </form>
   );

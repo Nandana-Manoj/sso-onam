@@ -4,6 +4,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { GoogleMark } from '../../components/Icons';
 import { toE164 } from '../../lib/format';
+import { byName } from '../../lib/ui';
 import {
   firebaseEnabled,
   sendPhoneOtp,
@@ -35,7 +36,7 @@ export default function Register() {
   useEffect(() => {
     supabase.from('public_towers').select('*').order('name').then(({ data, error }) => {
       if (error) setErr(error.message);
-      else setTowers((data as PublicTower[]) ?? []);
+      else setTowers(((data as PublicTower[]) ?? []).sort(byName));
     });
   }, []);
 
@@ -88,14 +89,14 @@ export default function Register() {
   if (phoneVerify && step === 'otp') {
     return (
       <div className="auth-page">
-        <h1>Verify your number</h1>
+        <h1>Verify Your Number</h1>
         <p className="muted">We sent a code to {form.mobile}.</p>
         <form onSubmit={onVerify} className="card">
-          <label>Enter code
+          <label>Enter Code
             <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" required />
           </label>
           {err && <p className="error">{err}</p>}
-          <button type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Verify & finish'}</button>
+          <button type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Verify & Finish'}</button>
           <button type="button" className="link-btn" onClick={backToForm}>Back</button>
         </form>
         {/* Invisible reCAPTCHA mount point for Firebase phone auth. */}
@@ -106,25 +107,27 @@ export default function Register() {
 
   return (
     <div className="auth-page">
-      <h1>Create your account</h1>
+      <h1>Create Your Account</h1>
       <form onSubmit={onSubmit} className="card">
-        <label>Name<input value={form.name} onChange={(e) => set('name', e.target.value)} required /></label>
-        <label>Mobile number
-          <input type="tel" value={form.mobile} onChange={(e) => set('mobile', e.target.value)} placeholder="10-digit mobile" required />
+        <label>Name<input name="name" autoComplete="name" value={form.name} onChange={(e) => set('name', e.target.value)} required /></label>
+        <label>Mobile Number
+          <input type="tel" name="mobile" autoComplete="username" value={form.mobile} onChange={(e) => set('mobile', e.target.value)} placeholder="10-digit mobile" required />
         </label>
         <label>Tower
           <select value={form.towerId} onChange={(e) => set('towerId', e.target.value)} required>
-            <option value="" disabled>Select your tower</option>
+            <option value="" disabled>Select Your Tower</option>
             {towers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </label>
-        <label>Flat number<input value={form.flatNumber} onChange={(e) => set('flatNumber', e.target.value)} required /></label>
+        <label>Flat Number<input autoComplete="off" value={form.flatNumber} onChange={(e) => set('flatNumber', e.target.value)} placeholder="e.g. 10183" required /></label>
         <label>Password
-          <input type="password" value={form.password} onChange={(e) => set('password', e.target.value)} minLength={6} required />
+          <input type="password" autoComplete="new-password" value={form.password} onChange={(e) => set('password', e.target.value)} placeholder="At least 6 characters" minLength={6} required />
         </label>
+        {/* "I'm not a robot" checkbox — tick it before requesting the code. */}
+        {firebaseEnabled && <div id="recaptcha-register" style={{ marginTop: '0.8rem' }} />}
         {err && <p className="error">{err}</p>}
         <button type="submit" disabled={busy}>
-          {busy ? 'Please wait…' : phoneVerify ? 'Send verification code' : 'Create account'}
+          {busy ? 'Please wait…' : phoneVerify ? 'Send Verification Code' : 'Create Account'}
         </button>
         <div className="or-divider"><span>or</span></div>
         <button
@@ -144,9 +147,6 @@ export default function Register() {
           <GoogleMark /> Continue with Google
         </button>
       </form>
-      {/* Invisible reCAPTCHA mount point (also present on the form step so the
-          first "Send code" click has a target to attach to). */}
-      <div id="recaptcha-register" />
       <p className="muted">Already have an account? <Link to="/login">Log in</Link></p>
     </div>
   );

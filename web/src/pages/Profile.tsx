@@ -55,23 +55,23 @@ export default function Profile() {
 
   return (
     <div className="page">
-      <h2>Your profile</h2>
+      <h2>Your Profile</h2>
 
       {/* Editable details */}
       <form className="card" onSubmit={onSave}>
-        <h3>Your details</h3>
+        <h3>Your Details</h3>
         <p className="muted" style={{ marginTop: 0 }}>You can update these.</p>
         <label>Name
           <input value={name} onChange={(e) => { setName(e.target.value); setSaved(false); }} required />
         </label>
         {err && <p className="error">{err}</p>}
         {saved && <p className="muted">Saved.</p>}
-        <button type="submit" disabled={busy || !changed}>{busy ? 'Saving…' : 'Save changes'}</button>
+        <button type="submit" disabled={busy || !changed}>{busy ? 'Saving…' : 'Save Changes'}</button>
       </form>
 
       {/* Locked details — managed elsewhere, changeable only via admin request */}
       <div className="card">
-        <h3>Account info <span className="lock-tag">🔒 Locked</span></h3>
+        <h3>Account Info <span className="lock-tag">🔒 Locked</span></h3>
         <p className="muted" style={{ marginTop: 0 }}>
           These can’t be changed here. Your mobile is your verified login ID and can’t be changed.
           For a tower or flat correction, request a change and an admin will review it.
@@ -89,15 +89,15 @@ export default function Profile() {
           <p className="muted">⏳ You have a pending change request awaiting admin review.</p>
         ) : (
           <button type="button" className="secondary" onClick={() => setShowRequest(true)}>
-            Request a tower/flat change
+            Request a Tower/Flat Change
           </button>
         )}
       </div>
 
       {/* Actions */}
       <div className="row">
-        <button type="button" onClick={() => setShowPw(true)}>Change password</button>
-        <button type="button" onClick={() => signOut()}>Log out</button>
+        <button type="button" onClick={() => setShowPw(true)}>Change Password</button>
+        <button type="button" onClick={() => signOut()}>Log Out</button>
       </div>
 
       {showPw && <ChangePasswordModal onClose={() => setShowPw(false)} />}

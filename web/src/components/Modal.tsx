@@ -5,10 +5,12 @@ export default function Modal({
   title,
   children,
   onClose,
+  wide,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  wide?: boolean;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -18,7 +20,7 @@ export default function Modal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+      <div className={`modal-card${wide ? ' wide' : ''}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <h3>{title}</h3>
         {children}
       </div>

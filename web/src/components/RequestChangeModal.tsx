@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import Modal from './Modal';
+import { byName } from '../lib/ui';
 import type { PublicTower } from '../lib/types';
 
 // Residents can't edit their tower/flat directly (identity guard). Instead they
@@ -30,7 +31,7 @@ export default function RequestChangeModal({
 
   useEffect(() => {
     supabase.from('public_towers').select('*').order('name').then(({ data }) => {
-      setTowers((data as PublicTower[]) ?? []);
+      setTowers(((data as PublicTower[]) ?? []).sort(byName));
     });
   }, []);
 
@@ -70,7 +71,7 @@ export default function RequestChangeModal({
   }
 
   return (
-    <Modal title="Request a change" onClose={onClose}>
+    <Modal title="Request a Change" onClose={onClose}>
       {done ? (
         <>
           <p>Your request was sent to the admin. You’ll keep your current details until it’s approved.</p>
@@ -86,14 +87,14 @@ export default function RequestChangeModal({
               {towers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </label>
-          <label>Flat number
+          <label>Flat Number
             <input value={flatNumber} onChange={(e) => setFlatNumber(e.target.value)} placeholder="e.g. A-1203" />
           </label>
           <label>Reason
             <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why are you requesting this change?" required />
           </label>
           {err && <p className="error">{err}</p>}
-          <button type="submit" disabled={busy}>{busy ? 'Sending…' : 'Send request'}</button>
+          <button type="submit" disabled={busy}>{busy ? 'Sending…' : 'Send Request'}</button>
         </form>
       )}
     </Modal>

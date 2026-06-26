@@ -25,7 +25,7 @@ export default function ChangePasswordModal({ onClose }: { onClose: () => void }
   }
 
   return (
-    <Modal title="Change password" onClose={onClose}>
+    <Modal title="Change Password" onClose={onClose}>
       {done ? (
         <>
           <p>Your password has been updated.</p>
@@ -33,17 +33,17 @@ export default function ChangePasswordModal({ onClose }: { onClose: () => void }
         </>
       ) : (
         <form onSubmit={onSubmit}>
-          <label>Current password
-            <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required autoFocus />
+          <label>Current Password
+            <input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="Your current password" required autoFocus />
           </label>
-          <label>New password
-            <input type="password" value={next} onChange={(e) => setNext(e.target.value)} minLength={6} required />
+          <label>New Password
+            <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} placeholder="At least 6 characters" minLength={6} required />
           </label>
-          <label>Confirm new password
-            <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} minLength={6} required />
+          <label>Confirm New Password
+            <input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter new password" minLength={6} required />
           </label>
           {err && <p className="error">{err}</p>}
-          <button type="submit" disabled={busy}>{busy ? 'Updating…' : 'Update password'}</button>
+          <button type="submit" disabled={busy}>{busy ? 'Updating…' : 'Update Password'}</button>
         </form>
       )}
     </Modal>

@@ -61,13 +61,13 @@ export default function AdminDashboard() {
         <>
           <p className="muted">{event.name} · contributions</p>
 
+          <ContributionOverview towers={towers} flats={flats} contribs={contribs} />
+
           <div className="card card-accent">
-            <h3>Record a walk-in / offline payment</h3>
+            <h3>Record a Walk-In / Offline Payment</h3>
             <p className="muted">For a resident who paid a rep directly without using the app — marks the flat as paid.</p>
             <OfflinePaymentForm towers={towers} onRecorded={load} />
           </div>
-
-          <ContributionOverview towers={towers} flats={flats} contribs={contribs} />
         </>
       )}
       {error && <p className="error">{error}</p>}

@@ -35,6 +35,42 @@ export interface EventConfig {
   verification_cutoff_at: string | null;
   currency: string;
   logo_path: string | null;
+  status?: 'draft' | 'open' | 'closed';
+  closed_at?: string | null;
+}
+
+// Per-event roster snapshot returned by get_event_roster (frozen on close).
+export interface RosterAdmin { user_id: string; name: string; mobile: string }
+export interface RosterTower {
+  tower_id: string;
+  name: string;
+  rep_user_id: string | null;
+  rep_name: string | null;
+  rep_mobile: string | null;
+  collected_verified: number;
+  contributions_count: number;
+  flats_paid: number;
+}
+export interface RosterRep {
+  user_id: string;
+  name: string;
+  mobile: string;
+  collected_verified: number;
+  contributions_count: number;
+}
+export interface EventRoster {
+  generated_at: string;
+  config: { name: string; year: number; min_contribution: number; adult_sadya_price: number; child_sadya_price: number };
+  admins: RosterAdmin[];
+  towers: RosterTower[];
+  reps: RosterRep[];
+  totals: {
+    collected_verified: number;
+    refunded: number;
+    contributions_verified: number;
+    flats_total: number;
+    flats_paid: number;
+  };
 }
 
 export type ContributionStatus =

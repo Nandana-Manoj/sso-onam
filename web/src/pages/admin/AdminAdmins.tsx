@@ -92,12 +92,12 @@ export default function AdminAdmins() {
             <div className="muted">{p.mobile} · <span className="badge soft pending">{prettyRole(p.role)}</span></div>
           </div>
           {p.role === 'admin'
-            ? <span className="badge soft verified">Already admin</span>
-            : <button onClick={() => grant(p)} disabled={busy}>Make admin</button>}
+            ? <span className="badge soft verified">Already Admin</span>
+            : <button onClick={() => grant(p)} disabled={busy}>Make Admin</button>}
         </div>
       ))}
 
-      <div className="section-title"><h3>Current admins</h3></div>
+      <div className="section-title"><h3>Current Admins</h3></div>
       <ul className="list">
         {admins.map((a) => (
           <li key={a.id} className="card between">
@@ -113,10 +113,10 @@ export default function AdminAdmins() {
       </ul>
 
       {revoking && (
-        <Modal title={`Revoke admin for ${revoking.name}?`} onClose={() => setRevoking(null)}>
+        <Modal title={`Revoke Admin for ${revoking.name}?`} onClose={() => setRevoking(null)}>
           <p className="muted">They'll become a regular resident. You can grant it again later.</p>
           <div className="row">
-            <button className="danger-btn" disabled={busy} onClick={confirmRevoke}>Revoke admin</button>
+            <button className="danger-btn" disabled={busy} onClick={confirmRevoke}>Revoke Admin</button>
             <button className="secondary" onClick={() => setRevoking(null)}>Cancel</button>
           </div>
         </Modal>

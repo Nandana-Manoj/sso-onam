@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { toE164 } from '../../lib/format';
+import { byName } from '../../lib/ui';
 import {
   firebaseEnabled,
   sendPhoneOtp,
@@ -41,7 +42,7 @@ export default function Onboarding() {
   useEffect(() => {
     supabase.from('public_towers').select('*').order('name').then(({ data, error }) => {
       if (error) setErr(error.message);
-      else setTowers((data as PublicTower[]) ?? []);
+      else setTowers(((data as PublicTower[]) ?? []).sort(byName));
     });
   }, []);
 
@@ -102,14 +103,14 @@ export default function Onboarding() {
   if (firebaseEnabled && step === 'otp') {
     return (
       <div className="auth-page">
-        <h1>Verify your number</h1>
+        <h1>Verify Your Number</h1>
         <p className="muted">We sent a code to {form.mobile}.</p>
         <form onSubmit={onVerify} className="card">
-          <label>Enter code
+          <label>Enter Code
             <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" required />
           </label>
           {err && <p className="error">{err}</p>}
-          <button type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Verify & finish'}</button>
+          <button type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Verify & Finish'}</button>
           <button type="button" className="link-btn" onClick={backToForm}>Back</button>
         </form>
         <div id="recaptcha-onboarding" />
@@ -119,30 +120,31 @@ export default function Onboarding() {
 
   return (
     <div className="auth-page">
-      <h1>Almost there 🌼</h1>
+      <h1>Almost There 🌼</h1>
       <p className="muted">Tell us a few details to finish setting up your account.</p>
       <form onSubmit={onSubmit} className="card">
         <label>Name
           <input value={form.name} onChange={(e) => set('name', e.target.value)} required />
         </label>
-        <label>Mobile number
-          <input type="tel" value={form.mobile} onChange={(e) => set('mobile', e.target.value)} placeholder="10-digit mobile" required />
+        <label>Mobile Number
+          <input type="tel" name="mobile" autoComplete="username" value={form.mobile} onChange={(e) => set('mobile', e.target.value)} placeholder="10-digit mobile" required />
         </label>
         <label>Tower
           <select value={form.towerId} onChange={(e) => set('towerId', e.target.value)} required>
-            <option value="" disabled>Select your tower</option>
+            <option value="" disabled>Select Your Tower</option>
             {towers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </label>
-        <label>Flat number
-          <input value={form.flatNumber} onChange={(e) => set('flatNumber', e.target.value)} required />
+        <label>Flat Number
+          <input autoComplete="off" value={form.flatNumber} onChange={(e) => set('flatNumber', e.target.value)} placeholder="e.g. 10183" required />
         </label>
+        {/* "I'm not a robot" checkbox — tick it before requesting the code. */}
+        {firebaseEnabled && <div id="recaptcha-onboarding" style={{ marginTop: '0.8rem' }} />}
         {err && <p className="error">{err}</p>}
         <button type="submit" disabled={busy}>
-          {busy ? 'Please wait…' : firebaseEnabled ? 'Send verification code' : 'Finish setup'}
+          {busy ? 'Please wait…' : firebaseEnabled ? 'Send Verification Code' : 'Finish Setup'}
         </button>
       </form>
-      <div id="recaptcha-onboarding" />
       <p className="muted">
         Not you? <button className="link-btn" onClick={() => signOut().then(() => nav('/login'))}>Sign out</button>
       </p>
