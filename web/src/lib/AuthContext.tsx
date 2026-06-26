@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -48,13 +49,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  // Monotonic token so only the most recently started profile load may write state.
+  // During registration the SIGNED_IN listener fires a load *before* the profile row
+  // exists (reads null); without this guard that stale null can land after the real
+  // load and wrongly bounce the user to /onboarding.
+  const loadSeq = useRef(0);
 
   async function loadProfile(userId: string) {
+    const seq = ++loadSeq.current;
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .maybeSingle();
+    if (seq !== loadSeq.current) return; // a newer load started — discard this result
     if (error) {
       console.error('loadProfile', error);
       setProfile(null);
