@@ -35,6 +35,7 @@ export interface EventConfig {
   verification_cutoff_at: string | null;
   currency: string;
   logo_path: string | null;
+  schedule_path: string | null;
   status?: 'draft' | 'open' | 'closed';
   closed_at?: string | null;
 }

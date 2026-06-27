@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { prettyRole, byName } from '../../lib/ui';
-import { formatINR } from '../../lib/format';
 import Modal from '../../components/Modal';
 import type { Tower } from '../../lib/types';
 
@@ -15,18 +14,9 @@ interface Candidate {
   flat_id: string | null;
   flats: { flat_number: string } | null;
 }
-interface VerifiedRow {
-  paid_to_rep_user_id: string | null;
-  paid_to_tower_id: string;
-  amount: number;
-  amount_paid: number | null;
-}
-interface RepTally { name: string; amount: number; count: number; isCurrent: boolean; }
-
 export default function AdminReps() {
   const [towers, setTowers] = useState<Tower[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
-  const [verified, setVerified] = useState<VerifiedRow[]>([]);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Candidate[]>([]);
   const [searched, setSearched] = useState(false);
@@ -40,23 +30,8 @@ export default function AdminReps() {
     const towerRows = ((tw as Tower[]) ?? []).sort(byName);
     setTowers(towerRows);
 
-    const { data: ev } = await supabase.from('events').select('id').eq('is_active', true).maybeSingle();
-    const eventId = (ev as { id: string } | null)?.id;
-
-    let vRows: VerifiedRow[] = [];
-    if (eventId) {
-      const { data: c } = await supabase
-        .from('contributions')
-        .select('paid_to_rep_user_id, paid_to_tower_id, amount, amount_paid')
-        .eq('event_id', eventId)
-        .eq('status', 'verified');
-      vRows = (c as VerifiedRow[]) ?? [];
-    }
-    setVerified(vRows);
-
     const ids = new Set<string>();
     towerRows.forEach((t) => t.rep_user_id && ids.add(t.rep_user_id));
-    vRows.forEach((v) => v.paid_to_rep_user_id && ids.add(v.paid_to_rep_user_id));
     if (ids.size) {
       const { data: profs } = await supabase.from('profiles').select('id, name').in('id', [...ids]);
       const map: Record<string, string> = {};
@@ -123,24 +98,6 @@ export default function AdminReps() {
     else { setMsg(`Removed the rep for ${t.name}.`); load(); }
   }
 
-  // collections grouped by rep, per tower
-  function tallies(towerId: string, currentRep: string | null): RepTally[] {
-    const byRep = new Map<string, { amount: number; count: number }>();
-    for (const v of verified) {
-      if (v.paid_to_tower_id !== towerId || !v.paid_to_rep_user_id) continue;
-      const cur = byRep.get(v.paid_to_rep_user_id) ?? { amount: 0, count: 0 };
-      cur.amount += Number(v.amount_paid ?? v.amount);
-      cur.count += 1;
-      byRep.set(v.paid_to_rep_user_id, cur);
-    }
-    return [...byRep.entries()].map(([id, agg]) => ({
-      name: names[id] ?? 'Unknown',
-      amount: agg.amount,
-      count: agg.count,
-      isCurrent: id === currentRep,
-    }));
-  }
-
   return (
     <div className="page">
       <p className="page-back"><Link to="/admin">← Admin</Link></p>
@@ -190,7 +147,7 @@ export default function AdminReps() {
       <div className="section-title"><h3>Towers &amp; Reps</h3></div>
       <ul className="list">
         {towers.map((t) => {
-          const repTallies = tallies(t.id, t.rep_user_id);
+          const hasPayment = !!(t.rep_upi_id || t.payment_qr_path);
           return (
             <li key={t.id} className="card">
               <div className="between">
@@ -201,29 +158,14 @@ export default function AdminReps() {
                   </div>
                 </div>
                 <span className="row" style={{ gap: '0.4rem' }}>
-                  <span className={`badge soft ${t.rep_contact ? 'verified' : 'pending'}`}>
-                    {t.rep_contact ? 'Payment Set' : 'No Payment'}
+                  <span className={`badge soft ${hasPayment ? 'verified' : 'pending'}`}>
+                    {hasPayment ? 'Payment info available' : 'Payment info N/A'}
                   </span>
                   {t.rep_user_id && (
                     <button className="danger-btn" disabled={busy} onClick={() => setRemoving(t)}>Remove</button>
                   )}
                 </span>
               </div>
-
-              {repTallies.length > 0 && (
-                <div style={{ marginTop: '0.6rem' }}>
-                  <p className="muted" style={{ margin: '0 0 0.3rem' }}>Collected (Verified) by Rep:</p>
-                  {repTallies.map((r) => (
-                    <div key={r.name} className="between" style={{ padding: '0.15rem 0' }}>
-                      <span>
-                        {r.name}{' '}
-                        {r.isCurrent ? <span className="badge soft verified">Current</span> : <span className="badge soft pending">Past</span>}
-                      </span>
-                      <span><strong>{formatINR(r.amount)}</strong> <span className="muted">· {r.count}</span></span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </li>
           );
         })}
