@@ -35,15 +35,6 @@ export interface OverviewCancellation {
   status: 'requested' | 'refunded';
 }
 
-type RowState = 'verified' | 'awaiting' | 'refunded' | 'requested';
-const STATE_LABEL: Record<RowState, string> = {
-  verified: 'Verified', awaiting: 'Awaiting Approval', refunded: 'Refunded', requested: 'Refund Requested',
-};
-// Refund rows reuse soft-badge palette (no dedicated 'requested' class → 'pending').
-const STATE_BADGE: Record<RowState, string> = {
-  verified: 'verified', awaiting: 'awaiting', refunded: 'refunded', requested: 'pending',
-};
-
 /** Bookings surface two payment states; refunds live in their own ledger.
  *  A started/rejected/expired/cancelled booking counts as no payment (null). */
 function rowState(s: OverviewSadya): 'verified' | 'awaiting' | null {
@@ -129,7 +120,7 @@ export default function SadyaOverview({
         />
       </div>
 
-      <SadyaLedgerTable towers={towers} sadya={sadya} cancellations={cancellations} collectedByTower={collectedByTower} />
+      <SadyaLedgerTable towers={towers} sadya={sadya} cancellations={cancellations} />
 
       <div className="card">
         <h3>Sadya Collected by Tower</h3>
@@ -150,109 +141,101 @@ export default function SadyaOverview({
   );
 }
 
+// One aggregated row per flat (kept narrow so it fits a phone screen).
+interface FlatRow {
+  key: string;
+  flat: string;
+  towerId: string;
+  bookings: number;        // count of bookings (verified + awaiting)
+  confirmedPasses: number; // verified persons − cancelled (matches the flat's QR)
+  awaitingPasses: number;  // persons in bookings still awaiting verification
+  collected: number;       // verified collected − refunded
+  refunded: number;        // ₹ paid back
+}
+
 function SadyaLedgerTable({
-  towers, sadya, cancellations, collectedByTower,
+  towers, sadya, cancellations,
 }: {
   towers: OverviewTower[];
   sadya: OverviewSadya[];
   cancellations: OverviewCancellation[];
-  collectedByTower: Map<string, number>;
 }) {
   const [towerFilter, setTowerFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | RowState>('all');
   const [expanded, setExpanded] = useState(false);
   const multiTower = towers.length > 1;
   const towerName = (id: string) => towers.find((t) => t.id === id)?.name ?? '—';
 
-  type Row = { id: string; flat: string; resident: string; towerId: string; adults: number; children: number; persons: number; st: RowState; amt: number };
-  const bookingRows: Row[] = sadya.flatMap((s) => {
+  // Aggregate everything down to one row per flat.
+  const byFlat = new Map<string, FlatRow>();
+  const get = (towerId: string, flat: string) => {
+    const key = `${towerId}|${flat}`;
+    let r = byFlat.get(key);
+    if (!r) {
+      r = { key, flat, towerId, bookings: 0, confirmedPasses: 0, awaitingPasses: 0, collected: 0, refunded: 0 };
+      byFlat.set(key, r);
+    }
+    return r;
+  };
+  for (const s of sadya) {
     const st = rowState(s);
-    if (!st) return [];
-    return [{
-      id: s.id,
-      flat: s.flat_number ?? '—',
-      resident: s.resident_name ?? '—',
-      towerId: s.paid_to_tower_id,
-      adults: s.num_adults,
-      children: s.num_children,
-      persons: s.total_persons,
-      st,
-      amt: sAmt(s),
-    }];
-  });
-  // Cancellations show as their own ledger rows (Refunded / Refund Requested).
-  const cancelRows: Row[] = cancellations.map((c) => ({
-    id: `c-${c.id}`,
-    flat: c.flat_number ?? '—',
-    resident: c.resident_name ?? '—',
-    towerId: c.paid_to_tower_id,
-    adults: c.num_adults,
-    children: c.num_children,
-    persons: c.total_persons,
-    st: c.status,
-    amt: c.amount,
-  }));
-  const rows = [...bookingRows, ...cancelRows]
+    if (!st) continue;
+    const r = get(s.paid_to_tower_id, s.flat_number ?? '—');
+    r.bookings += 1;
+    if (st === 'verified') { r.confirmedPasses += s.total_persons; r.collected += sAmt(s); }
+    else r.awaitingPasses += s.total_persons;
+  }
+  for (const c of cancellations) {
+    const r = get(c.paid_to_tower_id, c.flat_number ?? '—');
+    r.confirmedPasses = Math.max(0, r.confirmedPasses - c.total_persons);
+    if (c.status === 'refunded') { r.refunded += c.amount; r.collected -= c.amount; }
+  }
+
+  const rows = [...byFlat.values()]
     .filter((r) => towerFilter === 'all' || r.towerId === towerFilter)
-    .filter((r) => statusFilter === 'all' || r.st === statusFilter)
     .sort((a, b) =>
       a.towerId === b.towerId
         ? a.flat.localeCompare(b.flat, undefined, { numeric: true })
         : towerName(a.towerId).localeCompare(towerName(b.towerId), undefined, { numeric: true }),
     );
+  const collectedTotal = rows.reduce((s, r) => s + r.collected, 0);
 
   function exportCsv() {
     const stamp = new Date().toISOString().slice(0, 10);
     downloadCsv(
       `onam-sadya-${stamp}.csv`,
-      ['Tower', 'Flat', 'Resident', 'Adults', 'Children', 'Persons', 'Status', 'Amount (Rs.)'],
-      rows.map((r) => [towerName(r.towerId), r.flat, r.resident, r.adults, r.children, r.persons, STATE_LABEL[r.st], r.amt]),
+      ['Tower', 'Flat', 'Bookings', 'Confirmed Passes', 'Awaiting Passes', 'Collected (Rs.)', 'Refunded (Rs.)'],
+      rows.map((r) => [towerName(r.towerId), r.flat, r.bookings, r.confirmedPasses, r.awaitingPasses, r.collected, r.refunded]),
     );
   }
 
-  const collectedTotal = towerFilter === 'all'
-    ? [...collectedByTower.values()].reduce((s, v) => s + v, 0)
-    : collectedByTower.get(towerFilter) ?? 0;
-
-  const filters = (
+  const filters = multiTower ? (
     <div className="row" style={{ marginBottom: '0.6rem' }}>
-      {multiTower && (
-        <select value={towerFilter} onChange={(e) => setTowerFilter(e.target.value)} style={{ flex: 1 }}>
-          <option value="all">All Towers</option>
-          {towers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-      )}
-      <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | RowState)} style={{ flex: 1 }}>
-        <option value="all">All Statuses</option>
-        <option value="verified">Verified</option>
-        <option value="awaiting">Awaiting Approval</option>
-        <option value="requested">Refund Requested</option>
-        <option value="refunded">Refunded</option>
+      <select value={towerFilter} onChange={(e) => setTowerFilter(e.target.value)} style={{ flex: 1 }}>
+        <option value="all">All Towers</option>
+        {towers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
       </select>
     </div>
-  );
+  ) : null;
 
-  const renderTable = (visible: typeof rows) => (
+  const renderTable = (visible: FlatRow[]) => (
     <table className="tbl">
       <thead>
         <tr>
           <th>Flat</th>
           {multiTower && <th>Tower</th>}
-          <th>Resident</th>
-          <th>Persons</th>
-          <th>Status</th>
-          <th>Amount</th>
+          <th>Bookings</th>
+          <th>Passes</th>
+          <th>Collected</th>
         </tr>
       </thead>
       <tbody>
         {visible.map((r) => (
-          <tr key={r.id}>
+          <tr key={r.key}>
             <td>{r.flat}</td>
             {multiTower && <td>{towerName(r.towerId)}</td>}
-            <td>{r.resident}</td>
-            <td>{r.persons}</td>
-            <td><span className={`badge soft ${STATE_BADGE[r.st]}`}>{STATE_LABEL[r.st]}</span></td>
-            <td>{r.amt ? formatINR(r.amt) : '—'}</td>
+            <td>{r.bookings}</td>
+            <td>{r.confirmedPasses}{r.awaitingPasses ? ` (+${r.awaitingPasses})` : ''}</td>
+            <td>{r.collected ? formatINR(r.collected) : '—'}</td>
           </tr>
         ))}
       </tbody>
@@ -269,30 +252,31 @@ function SadyaLedgerTable({
   );
 
   const emptyMsg = (
-    <p className="muted">
-      {towerFilter !== 'all' || statusFilter !== 'all' ? 'No bookings match these filters.' : 'No sadya bookings yet.'}
-    </p>
+    <p className="muted">{towerFilter !== 'all' ? 'No bookings for this tower.' : 'No sadya bookings yet.'}</p>
   );
   const hasOverflow = rows.length > ROWS_PREVIEW;
 
   return (
     <div className="card">
       <div className="between">
-        <h3>Bookings &amp; Amounts</h3>
+        <h3>Bookings by Flat</h3>
         <button className="secondary" disabled={rows.length === 0} onClick={exportCsv}>Download CSV</button>
       </div>
+      <p className="muted" style={{ marginTop: 0, fontSize: '0.8rem' }}>
+        Passes = confirmed meals on the flat's QR; a <code>(+n)</code> shows passes still awaiting verification.
+      </p>
       {filters}
       {rows.length === 0 ? emptyMsg : renderTable(rows.slice(0, ROWS_PREVIEW))}
       {hasOverflow && (
         <button type="button" className="secondary" style={{ width: '100%' }} onClick={() => setExpanded(true)}>
-          Show All {rows.length} →
+          Show All {rows.length} Flats →
         </button>
       )}
 
       {expanded && (
-        <Modal title="Sadya Bookings & Amounts" onClose={() => setExpanded(false)} wide>
+        <Modal title="Sadya — Bookings by Flat" onClose={() => setExpanded(false)} wide>
           <div className="between" style={{ marginBottom: '0.4rem' }}>
-            <span className="muted">{rows.length} booking{rows.length === 1 ? '' : 's'}</span>
+            <span className="muted">{rows.length} flat{rows.length === 1 ? '' : 's'}</span>
             <button className="secondary" disabled={rows.length === 0} onClick={exportCsv}>Download CSV</button>
           </div>
           {filters}
