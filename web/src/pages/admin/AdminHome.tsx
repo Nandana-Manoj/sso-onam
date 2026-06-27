@@ -12,7 +12,7 @@ export default function AdminHome() {
       <div className="grid cols-2">
         <Link to="/admin/dashboard" className="card link-card">
           <h3>📊 Dashboard</h3>
-          <p className="muted">Live contributions — totals, charts and per-tower breakdown.</p>
+          <p className="muted">Live revenue — contributions, sadya or combined, with charts and CSV export.</p>
         </Link>
         <Link to="/admin/reps" className="card link-card">
           <h3>🧑‍🤝‍🧑 Representatives</h3>

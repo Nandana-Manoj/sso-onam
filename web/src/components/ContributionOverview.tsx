@@ -5,7 +5,7 @@ import { Donut } from './Charts';
 import Modal from './Modal';
 import type { ContributionStatus } from '../lib/types';
 
-const ROWS_PREVIEW = 10;
+const ROWS_PREVIEW = 15;
 
 export interface OverviewTower { id: string; name: string }
 export interface OverviewFlat { id: string; tower_id: string; flat_number: string }
@@ -19,18 +19,19 @@ export interface OverviewContrib {
   refund_state?: 'requested' | 'refunded' | null;
 }
 
-type RowState = 'verified' | 'awaiting' | 'pending' | 'refunded';
+type RowState = 'verified' | 'awaiting' | 'refunded';
 type FlatState = RowState | 'none';
 const STATE_LABEL: Record<FlatState, string> = {
-  verified: 'Verified', awaiting: 'Awaiting', pending: 'Started', refunded: 'Refunded', none: 'Not Started',
+  verified: 'Verified', awaiting: 'Awaiting Approval', refunded: 'Refunded', none: 'Not Started',
 };
 
-/** Effective state of a single contribution (refunded is its own state). */
+/** Effective state of a single contribution (refunded is its own state). Only
+ *  three payment states are surfaced; a started/rejected/expired one counts as
+ *  no payment yet ('none'). */
 function effState(c: OverviewContrib): FlatState {
   if (c.refund_state === 'refunded') return 'refunded';
   return c.status === 'verified' ? 'verified'
-    : c.status === 'submitted' ? 'awaiting'
-    : c.status === 'payment_pending' ? 'pending' : 'none';
+    : c.status === 'submitted' ? 'awaiting' : 'none';
 }
 const cAmt = (c: OverviewContrib) => Number(c.amount_paid ?? c.amount);
 
@@ -40,7 +41,7 @@ export default function ContributionOverview({
   towers, flats, contribs,
 }: { towers: OverviewTower[]; flats: OverviewFlat[]; contribs: OverviewContrib[] }) {
   // contribution-level counts (each contribution is one slice)
-  const counts = { verified: 0, awaiting: 0, pending: 0, refunded: 0 };
+  const counts = { verified: 0, awaiting: 0, refunded: 0 };
   const flatsWithActivity = new Set<string>();
   const flatsPaid = new Set<string>();
   for (const c of contribs) {
@@ -49,7 +50,6 @@ export default function ContributionOverview({
     flatsWithActivity.add(c.flat_id);
     if (st === 'verified') { counts.verified += 1; flatsPaid.add(c.flat_id); }
     else if (st === 'awaiting') counts.awaiting += 1;
-    else if (st === 'pending') counts.pending += 1;
     else if (st === 'refunded') counts.refunded += 1;
   }
   const notStarted = Math.max(0, flats.length - flatsWithActivity.size);
@@ -95,8 +95,7 @@ export default function ContributionOverview({
         <Donut
           segments={[
             { value: counts.verified, color: '#15803d', label: 'Verified' },
-            { value: counts.awaiting, color: '#1d4ed8', label: 'Awaiting' },
-            { value: counts.pending, color: '#b45309', label: 'Started' },
+            { value: counts.awaiting, color: '#1d4ed8', label: 'Awaiting Approval' },
             { value: counts.refunded, color: '#b91c1c', label: 'Refunded' },
             { value: notStarted, color: '#e7d8bf', label: 'Not Started' },
           ]}
@@ -176,8 +175,7 @@ function LedgerTable({
       <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | RowState)} style={{ flex: 1 }}>
         <option value="all">All Statuses</option>
         <option value="verified">Verified</option>
-        <option value="awaiting">Awaiting</option>
-        <option value="pending">Started</option>
+        <option value="awaiting">Awaiting Approval</option>
         <option value="refunded">Refunded</option>
       </select>
     </div>
