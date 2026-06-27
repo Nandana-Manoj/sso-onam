@@ -66,6 +66,7 @@ export default function RepHome() {
   const [contribs, setContribs] = useState<ContribRow[]>([]);
   const [sadya, setSadya] = useState<SadyaRow[]>([]);
   const [sadyaCancels, setSadyaCancels] = useState<SadyaCancelRow[]>([]);
+  const [sadyaPrices, setSadyaPrices] = useState<{ adult: number; child: number } | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +108,7 @@ export default function RepHome() {
     if (ids.length === 0) {
       setFlats([]); setContribs([]); setSadya([]); setSadyaCancels([]); setLoading(false); return;
     }
-    const [{ data: fl }, { data: c, error: e }, { data: sb }, { data: sc }] = await Promise.all([
+    const [{ data: fl }, { data: c, error: e }, { data: sb }, { data: sc }, { data: ev }] = await Promise.all([
       supabase.from('flats').select('id, tower_id, flat_number').in('tower_id', ids).order('flat_number'),
       supabase
         .from('contributions')
@@ -124,12 +125,15 @@ export default function RepHome() {
         .select('id, paid_to_tower_id, num_adults, num_children, total_persons, amount, status, reason, flats(flat_number), resident:profiles!resident_id(name)')
         .in('paid_to_tower_id', ids)
         .order('requested_at', { ascending: true }),
+      supabase.from('events').select('adult_sadya_price, child_sadya_price').eq('is_active', true).maybeSingle(),
     ]);
     if (e) setError(e.message);
     setFlats((fl as OverviewFlat[]) ?? []);
     setContribs((c as unknown as ContribRow[]) ?? []);
     setSadya((sb as unknown as SadyaRow[]) ?? []);
     setSadyaCancels((sc as unknown as SadyaCancelRow[]) ?? []);
+    const evp = ev as { adult_sadya_price: number; child_sadya_price: number } | null;
+    setSadyaPrices(evp ? { adult: evp.adult_sadya_price, child: evp.child_sadya_price } : undefined);
     setLoading(false);
   }, [profile?.id]);
 
@@ -412,7 +416,7 @@ export default function RepHome() {
       <div className="card card-accent">
         <h3>Record a Walk-In / Offline Payment</h3>
         <p className="muted">For residents who paid you directly without using the app. This marks the flat as paid (verified).</p>
-        <OfflinePaymentForm towers={towers} onRecorded={loadData} />
+        <OfflinePaymentForm towers={towers} sadyaPrices={sadyaPrices} onRecorded={loadData} />
       </div>
 
       {rejecting && (

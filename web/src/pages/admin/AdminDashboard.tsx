@@ -130,7 +130,11 @@ export default function AdminDashboard() {
           <div className="card card-accent">
             <h3>Record a Walk-In / Offline Payment</h3>
             <p className="muted">For a resident who paid a rep directly without using the app — marks the flat as paid.</p>
-            <OfflinePaymentForm towers={towers} onRecorded={load} />
+            <OfflinePaymentForm
+              towers={towers}
+              sadyaPrices={{ adult: event.adult_sadya_price, child: event.child_sadya_price }}
+              onRecorded={load}
+            />
           </div>
         </>
       )}

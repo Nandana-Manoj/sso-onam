@@ -358,6 +358,28 @@ code { background: #f4ecdd; padding: 0.05rem 0.35rem; border-radius: 6px; font-s
 .tbl td:last-child, .tbl th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 .tbl tfoot th { text-transform: none; color: var(--text); font-family: "Baloo 2", sans-serif; font-size: 0.95rem; border-top: 2px solid var(--line-strong); border-bottom: none; }
 
+/* ---------- Number stepper (−/+ counter) ---------- */
+.stepper {
+  display: flex; align-items: stretch; margin-top: 0.3rem;
+  border: 1.5px solid var(--line-strong); border-radius: 12px; overflow: hidden;
+  background: #fff; width: 100%; max-width: 190px;
+}
+.stepper input {
+  border: none; border-radius: 0; text-align: center; width: 100%; min-width: 0;
+  font-weight: 700; font-size: 1.05rem; margin: 0; padding: 0.45rem 0.2rem; background: #fff;
+  -moz-appearance: textfield;
+}
+.stepper input:focus { outline: none; }
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.step-btn {
+  margin: 0; border: none; border-radius: 0; box-shadow: none;
+  width: 48px; flex-shrink: 0; padding: 0; font-size: 1.5rem; line-height: 1;
+  background: var(--bg-2); color: var(--saffron); font-weight: 700;
+}
+.step-btn:hover:not(:disabled) { background: #f0e0c4; transform: none; box-shadow: none; }
+.step-btn:disabled { opacity: 0.45; }
+
 /* ---------- Flat status pills ---------- */
 .flat-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
 .flat-pill {

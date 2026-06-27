@@ -6,10 +6,9 @@ import { formatINR } from '../../lib/format';
 import { saveImage } from '../../lib/ui';
 import { DownloadIcon } from '../../components/Icons';
 import RepPayBox from '../../components/RepPayBox';
+import Stepper from '../../components/Stepper';
 import Modal from '../../components/Modal';
 import type { EventConfig, SadyaBooking, SadyaCancellation, QrPass } from '../../lib/types';
-
-const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
 export default function SadyaPanel({ event }: { event: EventConfig }) {
   const { profile } = useAuth();
@@ -243,12 +242,10 @@ export default function SadyaPanel({ event }: { event: EventConfig }) {
         <form onSubmit={createBooking} style={{ marginTop: '0.6rem' }}>
           <div className="grid cols-2">
             <label>Adults
-              <input type="number" min={0} step="1" value={adults}
-                onChange={(e) => setAdults(Math.max(0, Number(e.target.value) || 0))} />
+              <Stepper value={adults} onChange={setAdults} min={0} />
             </label>
             <label>Children (under 5)
-              <input type="number" min={0} step="1" value={children}
-                onChange={(e) => setChildren(Math.max(0, Number(e.target.value) || 0))} />
+              <Stepper value={children} onChange={setChildren} min={0} />
             </label>
           </div>
           <p style={{ margin: '0.4rem 0' }}>
@@ -268,12 +265,10 @@ export default function SadyaPanel({ event }: { event: EventConfig }) {
           </p>
           <div className="grid cols-2">
             <label>Adults to cancel (max {availAdults})
-              <input type="number" min={0} max={availAdults} step="1" value={cancelAdults}
-                onChange={(e) => setCancelAdults(clamp(Number(e.target.value) || 0, 0, availAdults))} />
+              <Stepper value={cancelAdults} onChange={setCancelAdults} min={0} max={availAdults} />
             </label>
             <label>Children to cancel (max {availChildren})
-              <input type="number" min={0} max={availChildren} step="1" value={cancelChildren}
-                onChange={(e) => setCancelChildren(clamp(Number(e.target.value) || 0, 0, availChildren))} />
+              <Stepper value={cancelChildren} onChange={setCancelChildren} min={0} max={availChildren} />
             </label>
           </div>
           <p style={{ margin: '0.4rem 0' }}>
