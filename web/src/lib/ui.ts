@@ -9,20 +9,18 @@ export function assetUrl(bucket: string, path: string | null | undefined): strin
 
 export interface StatusMeta {
   label: string;
-  cls: 'verified' | 'awaiting' | 'pending' | 'rejected' | 'none';
+  cls: 'verified' | 'awaiting' | 'refunded' | 'none';
 }
 
-/** Map a contribution status to a display label + a badge/pill class. */
+/** Map a contribution status to a display label + a badge/pill class. We surface
+ *  only three payment states: Verified, Awaiting Approval, Refunded. Anything
+ *  else (started, rejected, expired) is treated as "no payment yet". */
 export function contributionStatusMeta(status: ContributionStatus | null | undefined): StatusMeta {
   switch (status) {
     case 'verified':
       return { label: 'Verified', cls: 'verified' };
     case 'submitted':
-      return { label: 'Awaiting', cls: 'awaiting' };
-    case 'payment_pending':
-      return { label: 'Started', cls: 'pending' };
-    case 'rejected':
-      return { label: 'Rejected', cls: 'rejected' };
+      return { label: 'Awaiting Approval', cls: 'awaiting' };
     default:
       return { label: 'Not started', cls: 'none' };
   }

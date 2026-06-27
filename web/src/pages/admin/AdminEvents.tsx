@@ -173,6 +173,21 @@ function ActiveEventEditor({
     }
   }
 
+  async function toggleSadya() {
+    setMsg(null);
+    setBusy(true);
+    const { error } = await supabase.rpc('set_sadya_open', {
+      p_event_id: event.id,
+      p_open: !event.sadya_open,
+    });
+    setBusy(false);
+    if (error) setMsg(error.message);
+    else {
+      setMsg(event.sadya_open ? 'Sadya booking closed.' : 'Sadya booking opened — residents can book now.');
+      onChanged();
+    }
+  }
+
   async function closeEvent() {
     setBusy(true);
     onMessage(null);
@@ -292,7 +307,28 @@ function ActiveEventEditor({
           }} />
         </label>
         <button onClick={saveConfig} disabled={busy}>Save Configuration</button>
-        {msg && <p className={msg.toLowerCase().includes('saved') || msg.toLowerCase().includes('updated') ? 'success' : 'error'}>{msg}</p>}
+        {msg && <p className={/saved|updated|opened|closed|removed/.test(msg.toLowerCase()) ? 'success' : 'error'}>{msg}</p>}
+      </div>
+
+      <div className="card" style={{ marginTop: '0.9rem' }}>
+        <div className="between">
+          <div>
+            <h3 style={{ margin: 0 }}>Sadya Booking 🍛</h3>
+            <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+              Residents can book sadya only while this is open.{' '}
+              <span className={`badge soft ${event.sadya_open ? 'verified' : 'pending'}`}>
+                {event.sadya_open ? 'Open' : 'Closed'}
+              </span>
+            </p>
+          </div>
+          <button
+            className={event.sadya_open ? 'danger-btn' : 'success-btn'}
+            disabled={busy}
+            onClick={toggleSadya}
+          >
+            {event.sadya_open ? 'Close Booking' : 'Open Booking'}
+          </button>
+        </div>
       </div>
 
       <div className="card" style={{ marginTop: '0.9rem' }}>

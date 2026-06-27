@@ -5,6 +5,7 @@ import type { EventConfig } from '../../lib/types';
 import { formatINR } from '../../lib/format';
 import { assetUrl } from '../../lib/ui';
 import ContributionPanel from './ContributionPanel';
+import SadyaPanel from './SadyaPanel';
 
 export default function ResidentHome() {
   const { profile } = useAuth();
@@ -76,16 +77,13 @@ export default function ResidentHome() {
 
           <ContributionPanel event={event} />
 
+          <SadyaPanel event={event} />
+
           <div className="card">
             <h3>Your Tower Rep</h3>
             {repContact
               ? <p style={{ margin: 0 }}>{repContact}</p>
               : <p className="muted" style={{ margin: 0 }}>Your tower's rep hasn't added their contact yet.</p>}
-          </div>
-
-          <div className="card disabled">
-            <h3>Book Sadya 🍛</h3>
-            <p className="muted">Coming in the next phase.</p>
           </div>
         </>
       )}
