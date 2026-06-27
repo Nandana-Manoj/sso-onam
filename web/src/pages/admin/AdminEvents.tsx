@@ -149,6 +149,7 @@ function ActiveEventEditor({
   const [logoBust, setLogoBust] = useState(0);
   const [confirmClose, setConfirmClose] = useState(false);
   const logoUrl = assetUrl('event-assets', event.logo_path);
+  const scheduleUrl = assetUrl('event-assets', event.schedule_path);
 
   function set<K extends keyof typeof cfg>(key: K, value: string) {
     setCfg((c) => ({ ...c, [key]: value }));
@@ -203,6 +204,38 @@ function ActiveEventEditor({
     }
   }
 
+  async function uploadSchedule(file: File) {
+    setMsg(null);
+    setBusy(true);
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+    const path = `${event.id}/schedule.${ext}`;
+    const up = await supabase.storage.from('event-assets').upload(path, file, { upsert: true });
+    if (up.error) {
+      setBusy(false);
+      setMsg(up.error.message);
+      return;
+    }
+    const { error } = await supabase.from('events').update({ schedule_path: path }).eq('id', event.id);
+    setBusy(false);
+    if (error) setMsg(error.message);
+    else {
+      setMsg('Schedule updated — residents can now view it on their home page.');
+      onChanged();
+    }
+  }
+
+  async function removeSchedule() {
+    setMsg(null);
+    setBusy(true);
+    const { error } = await supabase.from('events').update({ schedule_path: null }).eq('id', event.id);
+    setBusy(false);
+    if (error) setMsg(error.message);
+    else {
+      setMsg('Schedule removed.');
+      onChanged();
+    }
+  }
+
   return (
     <div className="hero saffron">
       <div className="row" style={{ alignItems: 'flex-start' }}>
@@ -239,6 +272,23 @@ function ActiveEventEditor({
           <input type="file" accept="image/*" disabled={busy} onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) uploadLogo(f);
+          }} />
+        </label>
+        {scheduleUrl && (
+          <div className="card" style={{ background: '#eaf7ed', borderColor: 'rgba(46,160,67,0.45)', color: '#14532d' }}>
+            <strong style={{ color: '#14532d' }}>✓ A schedule is already uploaded</strong>
+            <p style={{ margin: '0.25rem 0 0', color: '#2f5233' }}>
+              Residents can see it on their home page.{' '}
+              <a href={scheduleUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#15803d', fontWeight: 600 }}>View it</a>
+              {' · '}
+              <a href="#" onClick={(e) => { e.preventDefault(); if (!busy) removeSchedule(); }} style={{ color: '#b91c1c', fontWeight: 600 }}>Remove</a>
+            </p>
+          </div>
+        )}
+        <label>{scheduleUrl ? 'Upload a different schedule (replaces the one above)' : 'Event Schedule (image or PDF)'}
+          <input type="file" accept="image/*,application/pdf" disabled={busy} onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) uploadSchedule(f);
           }} />
         </label>
         <button onClick={saveConfig} disabled={busy}>Save Configuration</button>

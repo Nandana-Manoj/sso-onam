@@ -35,6 +35,8 @@ export default function ResidentHome() {
   }, [profile?.tower_id]);
 
   const logo = assetUrl('event-assets', event?.logo_path);
+  const scheduleUrl = assetUrl('event-assets', event?.schedule_path);
+  const scheduleIsImage = !!event?.schedule_path && !/\.pdf$/i.test(event.schedule_path);
 
   return (
     <div className="page">
@@ -54,6 +56,23 @@ export default function ResidentHome() {
               {event.name} · Minimum {formatINR(event.min_contribution)} per flat · Sadya {formatINR(event.adult_sadya_price)}/adult
             </p>
           </div>
+
+          {scheduleUrl && (
+            <details className="disclosure card">
+              <summary>Event Schedule 📅</summary>
+              <div style={{ marginTop: '0.6rem' }}>
+                {scheduleIsImage ? (
+                  <a href={scheduleUrl} target="_blank" rel="noopener noreferrer">
+                    <img src={scheduleUrl} alt="Event schedule" style={{ width: '100%', borderRadius: 8 }} />
+                  </a>
+                ) : (
+                  <p style={{ margin: 0 }}>
+                    <a href={scheduleUrl} target="_blank" rel="noopener noreferrer">Open the schedule (PDF) →</a>
+                  </p>
+                )}
+              </div>
+            </details>
+          )}
 
           <ContributionPanel event={event} />
 
