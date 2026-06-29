@@ -123,8 +123,8 @@ export default function AdminEvents() {
           <label>Year<input type="number" value={form.year} onChange={(e) => set('year', e.target.value)} required /></label>
           <div className="grid cols-3">
             <label>Min Contribution (₹)<input type="number" value={form.min_contribution} onChange={(e) => set('min_contribution', e.target.value)} required /></label>
-            <label>Adult Sadya (₹)<input type="number" value={form.adult_sadya_price} onChange={(e) => set('adult_sadya_price', e.target.value)} required /></label>
-            <label>Child &lt;5 (₹)<input type="number" value={form.child_sadya_price} onChange={(e) => set('child_sadya_price', e.target.value)} required /></label>
+            <label>Adult Sadya Cost (₹)<input type="number" value={form.adult_sadya_price} onChange={(e) => set('adult_sadya_price', e.target.value)} required /></label>
+            <label>Child &lt;5 Sadya Cost (₹)<input type="number" value={form.child_sadya_price} onChange={(e) => set('child_sadya_price', e.target.value)} required /></label>
           </div>
           <button type="submit" disabled={busy}>Create Event</button>
         </form>
@@ -276,10 +276,10 @@ function ActiveEventEditor({
           <label>Min Contribution (₹)
             <input type="number" value={cfg.min_contribution} onChange={(e) => set('min_contribution', e.target.value)} />
           </label>
-          <label>Adult Sadya (₹)
+          <label>Adult Sadya Cost (₹)
             <input type="number" value={cfg.adult_sadya_price} onChange={(e) => set('adult_sadya_price', e.target.value)} />
           </label>
-          <label>Child &lt;5 (₹)
+          <label>Child &lt;5 Sadya Cost (₹)
             <input type="number" value={cfg.child_sadya_price} onChange={(e) => set('child_sadya_price', e.target.value)} />
           </label>
         </div>

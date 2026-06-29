@@ -5,6 +5,7 @@ import { formatINR } from '../../lib/format';
 import { assetUrl, byName } from '../../lib/ui';
 import OfflinePaymentForm from '../../components/OfflinePaymentForm';
 import CorrectionRequestsPanel from '../../components/CorrectionRequestsPanel';
+import TowerLeaderboard from '../../components/TowerLeaderboard';
 import {
   type OverviewContrib, type OverviewFlat, type OverviewTower,
 } from '../../components/ContributionOverview';
@@ -31,6 +32,7 @@ interface ContribRow {
   refund_state: 'requested' | 'refunded' | null;
   refund_reason: string | null;
   flats: { flat_number: string } | null;
+  resident: { name: string } | null;
 }
 interface SadyaRow {
   id: string;
@@ -58,6 +60,13 @@ interface SadyaCancelRow {
   flats: { flat_number: string } | null;
   resident: { name: string } | null;
 }
+interface SettlementRow {
+  id: string;
+  tower_id: string;
+  amount: number;
+  note: string | null;
+  created_at: string;
+}
 
 export default function RepHome() {
   const { profile } = useAuth();
@@ -67,6 +76,8 @@ export default function RepHome() {
   const [sadya, setSadya] = useState<SadyaRow[]>([]);
   const [sadyaCancels, setSadyaCancels] = useState<SadyaCancelRow[]>([]);
   const [sadyaPrices, setSadyaPrices] = useState<{ adult: number; child: number } | undefined>(undefined);
+  const [eventId, setEventId] = useState<string | null>(null);
+  const [settlements, setSettlements] = useState<SettlementRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +85,16 @@ export default function RepHome() {
   const [rejectReason, setRejectReason] = useState('');
   const [sadyaRejecting, setSadyaRejecting] = useState<SadyaRow | null>(null);
   const [sadyaRejectReason, setSadyaRejectReason] = useState('');
+
+  // Multi-select for bulk approve
+  const [selectedContribIds, setSelectedContribIds] = useState(new Set<string>());
+  const [selectedSadyaIds, setSelectedSadyaIds] = useState(new Set<string>());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  // Settlement form state per tower
+  const [settleInputs, setSettleInputs] = useState<Record<string, { amount: string; note: string }>>({});
+  const [settleBusy, setSettleBusy] = useState(false);
+  const [settleError, setSettleError] = useState<string | null>(null);
 
   // payment details (apply to all towers this rep manages)
   const [contact, setContact] = useState('');
@@ -89,10 +110,16 @@ export default function RepHome() {
 
   const loadData = useCallback(async () => {
     if (!profile?.id) { setLoading(false); return; }
-    const { data: tw } = await supabase
-      .from('towers')
-      .select('id, name, rep_contact, rep_upi_id, rep_payment_phone, payment_qr_path')
-      .eq('rep_user_id', profile.id);
+
+    // Fetch towers + active event in parallel (event needed for settlements query).
+    const [{ data: tw }, { data: ev }] = await Promise.all([
+      supabase
+        .from('towers')
+        .select('id, name, rep_contact, rep_upi_id, rep_payment_phone, payment_qr_path')
+        .eq('rep_user_id', profile.id),
+      supabase.from('events').select('id, adult_sadya_price, child_sadya_price').eq('is_active', true).maybeSingle(),
+    ]);
+
     const managed = ((tw as ManagedTower[]) ?? []).sort(byName);
     setTowers(managed);
 
@@ -104,15 +131,20 @@ export default function RepHome() {
       setQrPath(managed[0].payment_qr_path ?? null);
     }
 
+    const evp = ev as { id: string; adult_sadya_price: number; child_sadya_price: number } | null;
+    setSadyaPrices(evp ? { adult: evp.adult_sadya_price, child: evp.child_sadya_price } : undefined);
+    setEventId(evp?.id ?? null);
+
     const ids = managed.map((t) => t.id);
     if (ids.length === 0) {
-      setFlats([]); setContribs([]); setSadya([]); setSadyaCancels([]); setLoading(false); return;
+      setFlats([]); setContribs([]); setSadya([]); setSadyaCancels([]); setSettlements([]); setLoading(false); return;
     }
-    const [{ data: fl }, { data: c, error: e }, { data: sb }, { data: sc }, { data: ev }] = await Promise.all([
+
+    const [{ data: fl }, { data: c, error: e }, { data: sb }, { data: sc }, { data: sett }] = await Promise.all([
       supabase.from('flats').select('id, tower_id, flat_number').in('tower_id', ids).order('flat_number'),
       supabase
         .from('contributions')
-        .select('id, flat_id, paid_to_tower_id, status, amount, amount_paid, utr, payment_submitted_at, refund_state, refund_reason, flats(flat_number)')
+        .select('id, flat_id, paid_to_tower_id, status, amount, amount_paid, utr, payment_submitted_at, refund_state, refund_reason, flats(flat_number), resident:profiles!initiated_by_user_id(name)')
         .in('paid_to_tower_id', ids)
         .order('payment_submitted_at', { ascending: true }),
       supabase
@@ -125,15 +157,21 @@ export default function RepHome() {
         .select('id, paid_to_tower_id, num_adults, num_children, total_persons, amount, status, reason, flats(flat_number), resident:profiles!resident_id(name)')
         .in('paid_to_tower_id', ids)
         .order('requested_at', { ascending: true }),
-      supabase.from('events').select('adult_sadya_price, child_sadya_price').eq('is_active', true).maybeSingle(),
+      evp
+        ? supabase
+            .from('rep_settlements')
+            .select('id, tower_id, amount, note, created_at')
+            .in('tower_id', ids)
+            .eq('event_id', evp.id)
+            .order('created_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
     ]);
     if (e) setError(e.message);
     setFlats((fl as OverviewFlat[]) ?? []);
     setContribs((c as unknown as ContribRow[]) ?? []);
     setSadya((sb as unknown as SadyaRow[]) ?? []);
     setSadyaCancels((sc as unknown as SadyaCancelRow[]) ?? []);
-    const evp = ev as { adult_sadya_price: number; child_sadya_price: number } | null;
-    setSadyaPrices(evp ? { adult: evp.adult_sadya_price, child: evp.child_sadya_price } : undefined);
+    setSettlements((sett as unknown as SettlementRow[]) ?? []);
     setLoading(false);
   }, [profile?.id]);
 
@@ -191,6 +229,25 @@ export default function RepHome() {
     if (e) setError(e.message); else loadData();
   }
 
+  function toggleContrib(id: string) {
+    setSelectedContribIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  async function bulkApproveContribs() {
+    const ids = [...selectedContribIds];
+    setSelectedContribIds(new Set());
+    setError(null);
+    setBulkBusy(true);
+    await Promise.all(ids.map((id) =>
+      supabase.rpc('verify_contribution', { p_contribution_id: id, p_approve: true, p_reason: null }),
+    ));
+    setBulkBusy(false);
+    loadData();
+  }
+
   async function approveSadya(row: SadyaRow) {
     setError(null);
     setBusyId(row.id);
@@ -211,6 +268,25 @@ export default function RepHome() {
     setBusyId(null);
     setSadyaRejecting(null); setSadyaRejectReason('');
     if (e) setError(e.message); else loadData();
+  }
+
+  function toggleSadya(id: string) {
+    setSelectedSadyaIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  async function bulkApproveSadya() {
+    const ids = [...selectedSadyaIds];
+    setSelectedSadyaIds(new Set());
+    setError(null);
+    setBulkBusy(true);
+    await Promise.all(ids.map((id) =>
+      supabase.rpc('verify_sadya_booking', { p_booking_id: id, p_approve: true, p_reason: null }),
+    ));
+    setBulkBusy(false);
+    loadData();
   }
 
   const queue = contribs.filter((c) => c.status === 'submitted');
@@ -236,24 +312,64 @@ export default function RepHome() {
     total_persons: s.total_persons, amount: s.amount, status: s.status,
   }));
 
-  async function processRefund(row: ContribRow, approve: boolean) {
+  // Total collected per tower (contributions + sadya − refunds) for the settlement panel.
+  const towerCollected = new Map<string, number>();
+  overviewContribs.forEach((c) => {
+    if (c.status === 'verified' && c.refund_state !== 'refunded') {
+      const amt = Number(c.amount_paid ?? c.amount);
+      towerCollected.set(c.paid_to_tower_id, (towerCollected.get(c.paid_to_tower_id) ?? 0) + amt);
+    }
+  });
+  overviewSadya.forEach((s) => {
+    if (s.status === 'verified') {
+      const amt = Number(s.amount_paid ?? s.total_amount);
+      towerCollected.set(s.paid_to_tower_id, (towerCollected.get(s.paid_to_tower_id) ?? 0) + amt);
+    }
+  });
+  overviewCancellations.forEach((c) => {
+    if (c.status === 'refunded') {
+      towerCollected.set(c.paid_to_tower_id, (towerCollected.get(c.paid_to_tower_id) ?? 0) - c.amount);
+    }
+  });
+
+  async function processRefund(row: ContribRow, appr: boolean) {
     setError(null);
     setBusyId(row.id);
     const { error: e } = await supabase.rpc('process_refund', {
-      p_contribution_id: row.id, p_approve: approve, p_reason: null,
+      p_contribution_id: row.id, p_approve: appr, p_reason: null,
     });
     setBusyId(null);
     if (e) setError(e.message); else loadData();
   }
 
-  async function processSadyaCancel(row: SadyaCancelRow, approve: boolean) {
+  async function processSadyaCancel(row: SadyaCancelRow, appr: boolean) {
     setError(null);
     setBusyId(row.id);
     const { error: e } = await supabase.rpc('process_sadya_cancellation', {
-      p_cancellation_id: row.id, p_approve: approve, p_reason: null,
+      p_cancellation_id: row.id, p_approve: appr, p_reason: null,
     });
     setBusyId(null);
     if (e) setError(e.message); else loadData();
+  }
+
+  async function addSettlement(towerId: string) {
+    if (!eventId || !profile?.id) return;
+    const input = settleInputs[towerId] ?? {};
+    const amt = parseInt(input.amount ?? '', 10);
+    if (isNaN(amt) || amt <= 0) { setSettleError('Enter a valid amount.'); return; }
+    setSettleBusy(true);
+    setSettleError(null);
+    const { error: e } = await supabase.from('rep_settlements').insert({
+      event_id: eventId,
+      tower_id: towerId,
+      rep_user_id: profile.id,
+      amount: amt,
+      note: input.note?.trim() || null,
+    });
+    setSettleBusy(false);
+    if (e) { setSettleError(e.message); return; }
+    setSettleInputs((prev) => ({ ...prev, [towerId]: { amount: '', note: '' } }));
+    loadData();
   }
 
   if (loading) return <div className="page"><p className="muted">Loading…</p></div>;
@@ -266,6 +382,9 @@ export default function RepHome() {
       </div>
     );
   }
+
+  const allContribSelected = queue.length > 0 && selectedContribIds.size === queue.length;
+  const allSadyaSelected = sadyaQueue.length > 0 && selectedSadyaIds.size === sadyaQueue.length;
 
   return (
     <div className="page">
@@ -301,34 +420,65 @@ export default function RepHome() {
         {contactMsg && <p className={contactMsg.startsWith('Saved') || contactMsg.startsWith('QR') ? 'success' : 'error'}>{contactMsg}</p>}
       </div>
 
-      <div className="section-title"><h3>Verification Queue</h3>
+      {/* ── Verification Queue ─────────────────────────────────────────── */}
+      <div className="section-title">
+        <h3>Verification Queue</h3>
         {queue.length > 0 && <span className="badge awaiting">{queue.length}</span>}
       </div>
       {queue.length === 0 ? (
         <div className="card"><p className="muted">No payments waiting for verification. 🎉</p></div>
       ) : (
-        <ul className="list">
-          {queue.map((row) => (
-            <li key={row.id} className="card card-accent">
-              <p style={{ margin: '0 0 0.3rem' }}>
-                <strong>{towerName(row.paid_to_tower_id)} · Flat {row.flats?.flat_number ?? '—'}</strong> · paid{' '}
-                <strong>{formatINR(row.amount_paid ?? row.amount)}</strong>
-                {row.utr ? <> · UTR <code>{row.utr}</code></> : <span className="muted"> · no UTR</span>}
-              </p>
-              <p className="muted" style={{ margin: '0 0 0.4rem' }}>
-                Pledged {formatINR(row.amount)}
-                {row.payment_submitted_at ? ` · submitted ${new Date(row.payment_submitted_at).toLocaleString()}` : ''}
-              </p>
-              <div className="row">
-                <button className="success-btn" disabled={busyId === row.id} onClick={() => approve(row)}>Approve</button>
-                <button className="danger-btn" disabled={busyId === row.id} onClick={() => setRejecting(row)}>Reject</button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          <div className="row" style={{ marginBottom: '0.4rem', gap: '0.6rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={allContribSelected}
+                onChange={() => setSelectedContribIds(allContribSelected ? new Set() : new Set(queue.map((r) => r.id)))}
+              />
+              <span className="muted">Select all</span>
+            </label>
+            {selectedContribIds.size > 0 && (
+              <button className="success-btn" disabled={bulkBusy} onClick={bulkApproveContribs}>
+                Approve {selectedContribIds.size} selected
+              </button>
+            )}
+          </div>
+          <ul className="list">
+            {queue.map((row) => (
+              <li key={row.id} className="card card-accent">
+                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedContribIds.has(row.id)}
+                    onChange={() => toggleContrib(row.id)}
+                    style={{ marginTop: '0.2rem', cursor: 'pointer', flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: '0 0 0.3rem' }}>
+                      <strong>{towerName(row.paid_to_tower_id)} · Flat {row.flats?.flat_number ?? '—'}</strong>
+                      {row.resident?.name ? <> · {row.resident.name}</> : null}
+                      {' '}· paid <strong>{formatINR(row.amount_paid ?? row.amount)}</strong>
+                      {row.utr ? <> · UTR <code>{row.utr}</code></> : <span className="muted"> · no UTR</span>}
+                    </p>
+                    <p className="muted" style={{ margin: '0 0 0.4rem' }}>
+                      Pledged {formatINR(row.amount)}
+                      {row.payment_submitted_at ? ` · submitted ${new Date(row.payment_submitted_at).toLocaleString()}` : ''}
+                    </p>
+                  </div>
+                </div>
+                <div className="row">
+                  <button className="success-btn" disabled={!!busyId || bulkBusy} onClick={() => approve(row)}>Approve</button>
+                  <button className="danger-btn" disabled={!!busyId || bulkBusy} onClick={() => setRejecting(row)}>Reject</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
       {error && <p className="error">{error}</p>}
 
+      {/* ── Refund Requests ────────────────────────────────────────────── */}
       {refundQueue.length > 0 && (
         <>
           <div className="section-title"><h3>Refund Requests</h3>
@@ -339,6 +489,7 @@ export default function RepHome() {
               <li key={row.id} className="card card-accent">
                 <p style={{ margin: '0 0 0.3rem' }}>
                   <strong>{towerName(row.paid_to_tower_id)} · Flat {row.flats?.flat_number ?? '—'}</strong>
+                  {row.resident?.name ? <> · {row.resident.name}</> : null}
                   {' '}· refund <strong>{formatINR(row.amount_paid ?? row.amount)}</strong>
                 </p>
                 {row.refund_reason && <p className="muted" style={{ margin: '0 0 0.4rem' }}>Reason: {row.refund_reason}</p>}
@@ -353,34 +504,64 @@ export default function RepHome() {
         </>
       )}
 
-      <div className="section-title"><h3>Sadya Verification Queue</h3>
+      {/* ── Sadya Verification Queue ───────────────────────────────────── */}
+      <div className="section-title">
+        <h3>Sadya Verification Queue</h3>
         {sadyaQueue.length > 0 && <span className="badge awaiting">{sadyaQueue.length}</span>}
       </div>
       {sadyaQueue.length === 0 ? (
         <div className="card"><p className="muted">No sadya bookings waiting for verification. 🍛</p></div>
       ) : (
-        <ul className="list">
-          {sadyaQueue.map((row) => (
-            <li key={row.id} className="card card-accent">
-              <p style={{ margin: '0 0 0.3rem' }}>
-                <strong>{towerName(row.paid_to_tower_id)} · Flat {row.flats?.flat_number ?? '—'}</strong>
-                {row.resident?.name ? ` · ${row.resident.name}` : ''} · paid{' '}
-                <strong>{formatINR(row.amount_paid ?? row.total_amount)}</strong>
-                {row.utr ? <> · UTR <code>{row.utr}</code></> : <span className="muted"> · no UTR</span>}
-              </p>
-              <p className="muted" style={{ margin: '0 0 0.4rem' }}>
-                {sadyaPeople(row)} · {row.total_persons} {row.total_persons === 1 ? 'meal' : 'meals'}
-                {row.payment_submitted_at ? ` · submitted ${new Date(row.payment_submitted_at).toLocaleString()}` : ''}
-              </p>
-              <div className="row">
-                <button className="success-btn" disabled={busyId === row.id} onClick={() => approveSadya(row)}>Approve &amp; Issue Pass</button>
-                <button className="danger-btn" disabled={busyId === row.id} onClick={() => setSadyaRejecting(row)}>Reject</button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          <div className="row" style={{ marginBottom: '0.4rem', gap: '0.6rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={allSadyaSelected}
+                onChange={() => setSelectedSadyaIds(allSadyaSelected ? new Set() : new Set(sadyaQueue.map((r) => r.id)))}
+              />
+              <span className="muted">Select all</span>
+            </label>
+            {selectedSadyaIds.size > 0 && (
+              <button className="success-btn" disabled={bulkBusy} onClick={bulkApproveSadya}>
+                Approve &amp; Issue {selectedSadyaIds.size} selected
+              </button>
+            )}
+          </div>
+          <ul className="list">
+            {sadyaQueue.map((row) => (
+              <li key={row.id} className="card card-accent">
+                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedSadyaIds.has(row.id)}
+                    onChange={() => toggleSadya(row.id)}
+                    style={{ marginTop: '0.2rem', cursor: 'pointer', flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: '0 0 0.3rem' }}>
+                      <strong>{towerName(row.paid_to_tower_id)} · Flat {row.flats?.flat_number ?? '—'}</strong>
+                      {row.resident?.name ? ` · ${row.resident.name}` : ''} · paid{' '}
+                      <strong>{formatINR(row.amount_paid ?? row.total_amount)}</strong>
+                      {row.utr ? <> · UTR <code>{row.utr}</code></> : <span className="muted"> · no UTR</span>}
+                    </p>
+                    <p className="muted" style={{ margin: '0 0 0.4rem' }}>
+                      {sadyaPeople(row)} · {row.total_persons} {row.total_persons === 1 ? 'meal' : 'meals'}
+                      {row.payment_submitted_at ? ` · submitted ${new Date(row.payment_submitted_at).toLocaleString()}` : ''}
+                    </p>
+                  </div>
+                </div>
+                <div className="row">
+                  <button className="success-btn" disabled={!!busyId || bulkBusy} onClick={() => approveSadya(row)}>Approve &amp; Issue Pass</button>
+                  <button className="danger-btn" disabled={!!busyId || bulkBusy} onClick={() => setSadyaRejecting(row)}>Reject</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
+      {/* ── Sadya Cancellation Requests ────────────────────────────────── */}
       {sadyaCancelQueue.length > 0 && (
         <>
           <div className="section-title"><h3>Sadya Cancellation Requests</h3>
@@ -410,9 +591,102 @@ export default function RepHome() {
 
       <CorrectionRequestsPanel />
 
+      {/* ── Revenue Dashboard ──────────────────────────────────────────── */}
       <div className="section-title"><h3>Your Towers</h3></div>
       <RevenueDashboard towers={towers} flats={flats} contribs={overviewContribs} sadya={overviewSadya} cancellations={overviewCancellations} />
 
+      {/* ── Settlement Section ─────────────────────────────────────────── */}
+      <div className="section-title"><h3>Settlements</h3></div>
+      <p className="muted" style={{ margin: '-0.4rem 0 0.6rem' }}>
+        Record each transfer you make to the organising committee. Your amount in hand updates automatically.
+      </p>
+      {towers.map((tower) => {
+        const towerSettlements = settlements.filter((s) => s.tower_id === tower.id);
+        const collected = towerCollected.get(tower.id) ?? 0;
+        const settled = towerSettlements.reduce((s, r) => s + r.amount, 0);
+        const inHand = collected - settled;
+        const allSettled = collected > 0 && inHand <= 0;
+        const inp = settleInputs[tower.id] ?? { amount: '', note: '' };
+
+        return (
+          <div key={tower.id} className="card card-accent">
+            <div className="between">
+              <h3 style={{ margin: 0 }}>{tower.name}</h3>
+              {allSettled && <span className="badge soft verified">Fully Settled ✓</span>}
+            </div>
+            <div className="grid cols-3" style={{ marginTop: '0.6rem' }}>
+              <div className="stat green">
+                <div className="stat-value">{formatINR(collected)}</div>
+                <div className="stat-label">Total Collected</div>
+              </div>
+              <div className="stat blue">
+                <div className="stat-value">{formatINR(settled)}</div>
+                <div className="stat-label">Settled</div>
+              </div>
+              <div className={`stat ${inHand > 0 ? 'amber' : 'green'}`}>
+                <div className="stat-value">{formatINR(Math.max(0, inHand))}</div>
+                <div className="stat-label">Amount in Hand</div>
+              </div>
+            </div>
+
+            {towerSettlements.length > 0 && (
+              <table className="tbl" style={{ marginTop: '0.6rem' }}>
+                <thead>
+                  <tr><th>Date</th><th>Amount</th><th>Note</th></tr>
+                </thead>
+                <tbody>
+                  {towerSettlements.map((s) => (
+                    <tr key={s.id}>
+                      <td className="muted">{new Date(s.created_at).toLocaleDateString()}</td>
+                      <td>{formatINR(s.amount)}</td>
+                      <td className="muted">{s.note || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {!allSettled && (
+              <div style={{ marginTop: '0.8rem', borderTop: '1px solid var(--line)', paddingTop: '0.8rem' }}>
+                <p className="muted" style={{ margin: '0 0 0.5rem' }}>Record a transfer to the organising committee:</p>
+                <label>Amount (₹)
+                  <input
+                    type="number"
+                    placeholder={inHand > 0 ? `Up to ${formatINR(inHand)}` : '0'}
+                    value={inp.amount}
+                    onChange={(e) => setSettleInputs((prev) => ({ ...prev, [tower.id]: { ...inp, amount: e.target.value } }))}
+                  />
+                </label>
+                <label>Note (optional)
+                  <input
+                    placeholder="e.g. Cash handed to treasurer"
+                    value={inp.note}
+                    onChange={(e) => setSettleInputs((prev) => ({ ...prev, [tower.id]: { ...inp, note: e.target.value } }))}
+                  />
+                </label>
+                <button
+                  className="success-btn"
+                  disabled={settleBusy || !inp.amount}
+                  onClick={() => addSettlement(tower.id)}
+                >
+                  Record Settlement
+                </button>
+                {settleError && <p className="error" style={{ marginTop: '0.4rem' }}>{settleError}</p>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* ── Tower Leaderboard (all towers, for healthy competition) ───── */}
+      {eventId && (
+        <>
+          <div className="section-title"><h3>Tower Leaderboard</h3></div>
+          <TowerLeaderboard eventId={eventId} />
+        </>
+      )}
+
+      {/* ── Walk-In / Offline Payment ──────────────────────────────────── */}
       <div className="card card-accent">
         <h3>Record a Walk-In / Offline Payment</h3>
         <p className="muted">For residents who paid you directly without using the app. This marks the flat as paid (verified).</p>

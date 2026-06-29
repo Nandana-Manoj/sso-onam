@@ -85,14 +85,43 @@ function CombinedOverview({
   };
   const maxTower = Math.max(1, ...towers.map((t) => towerTotal(t.id)));
 
+  // Families = distinct flat_ids with a verified, non-refunded contribution per tower.
+  const familiesByTower = new Map<string, Set<string>>();
+  contribs.forEach((c) => {
+    if (c.status === 'verified' && c.refund_state !== 'refunded') {
+      const s = familiesByTower.get(c.paid_to_tower_id) ?? new Set<string>();
+      s.add(c.flat_id);
+      familiesByTower.set(c.paid_to_tower_id, s);
+    }
+  });
+
+  // Sadya passes = verified total_persons minus refunded cancellation total_persons per tower.
+  const sadyaPassesByTower = new Map<string, number>();
+  sadya.forEach((b) => {
+    if (b.status === 'verified') {
+      sadyaPassesByTower.set(b.paid_to_tower_id, (sadyaPassesByTower.get(b.paid_to_tower_id) ?? 0) + b.total_persons);
+    }
+  });
+  cancellations.forEach((c) => {
+    if (c.status === 'refunded') {
+      sadyaPassesByTower.set(c.paid_to_tower_id, (sadyaPassesByTower.get(c.paid_to_tower_id) ?? 0) - c.total_persons);
+    }
+  });
+
   function exportCsv() {
     const stamp = new Date().toISOString().slice(0, 10);
-    const rows = towers.map((t) => {
-      const v = byTower.get(t.id) ?? { contrib: 0, sadya: 0 };
-      return [t.name, v.contrib, v.sadya, v.contrib + v.sadya];
-    });
-    rows.push(['Total', contribTotal, sadyaTotal, grandTotal]);
-    downloadCsv(`onam-combined-${stamp}.csv`, ['Tower', 'Contributions (Rs.)', 'Sadya (Rs.)', 'Total (Rs.)'], rows);
+    const rows = towers.map((t) => [
+      t.name,
+      familiesByTower.get(t.id)?.size ?? 0,
+      Math.max(0, sadyaPassesByTower.get(t.id) ?? 0),
+      towerTotal(t.id),
+    ]);
+    rows.push(['Total', '', '', grandTotal]);
+    downloadCsv(
+      `onam-combined-${stamp}.csv`,
+      ['Tower', 'Families Contributed', 'Sadya Passes Sold', 'Total (Rs.)'],
+      rows,
+    );
   }
 
   return (
@@ -131,17 +160,19 @@ function CombinedOverview({
         </div>
         <table className="tbl">
           <thead>
-            <tr><th>Tower</th><th>Contributions</th><th>Sadya</th><th>Total</th></tr>
+            <tr><th>Tower</th><th>Families</th><th>Sadya Passes</th><th>Total</th></tr>
           </thead>
           <tbody>
             {towers.map((t) => {
-              const v = byTower.get(t.id) ?? { contrib: 0, sadya: 0 };
+              const families = familiesByTower.get(t.id)?.size ?? 0;
+              const passes = Math.max(0, sadyaPassesByTower.get(t.id) ?? 0);
+              const total = towerTotal(t.id);
               return (
                 <tr key={t.id}>
                   <td>{t.name}</td>
-                  <td>{v.contrib ? formatINR(v.contrib) : '—'}</td>
-                  <td>{v.sadya ? formatINR(v.sadya) : '—'}</td>
-                  <td>{v.contrib + v.sadya ? formatINR(v.contrib + v.sadya) : '—'}</td>
+                  <td>{families || '—'}</td>
+                  <td>{passes || '—'}</td>
+                  <td>{total ? formatINR(total) : '—'}</td>
                 </tr>
               );
             })}
@@ -149,8 +180,8 @@ function CombinedOverview({
           <tfoot>
             <tr>
               <th>Total</th>
-              <th>{formatINR(contribTotal)}</th>
-              <th>{formatINR(sadyaTotal)}</th>
+              <th />
+              <th />
               <th>{formatINR(grandTotal)}</th>
             </tr>
           </tfoot>
