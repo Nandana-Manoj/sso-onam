@@ -487,13 +487,20 @@ export default function RepHome() {
           <ul className="list">
             {refundQueue.map((row) => (
               <li key={row.id} className="card card-accent">
-                <p style={{ margin: '0 0 0.3rem' }}>
-                  <strong>{towerName(row.paid_to_tower_id)} · Flat {row.flats?.flat_number ?? '—'}</strong>
-                  {row.resident?.name ? <> · {row.resident.name}</> : null}
-                  {' '}· refund <strong>{formatINR(row.amount_paid ?? row.amount)}</strong>
-                </p>
-                {row.refund_reason && <p className="muted" style={{ margin: '0 0 0.4rem' }}>Reason: {row.refund_reason}</p>}
-                <p className="muted" style={{ margin: '0 0 0.4rem' }}>Pay the resident back, then mark it refunded.</p>
+                <div className="between" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <div>
+                    <strong style={{ fontSize: '1.05rem' }}>Flat {row.flats?.flat_number ?? '—'}</strong>
+                    <div className="muted" style={{ marginTop: '0.2rem', fontSize: '0.85rem' }}>
+                      {towerName(row.paid_to_tower_id)}{row.resident?.name ? ` · ${row.resident.name}` : ''}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{formatINR(row.amount_paid ?? row.amount)}</div>
+                    <div className="muted" style={{ fontSize: '0.75rem' }}>refund due</div>
+                  </div>
+                </div>
+                {row.refund_reason && <p className="muted" style={{ margin: '0.7rem 0 0' }}>Reason: {row.refund_reason}</p>}
+                <p className="muted" style={{ margin: '0.5rem 0 0.7rem' }}>Pay the resident back, then mark it refunded.</p>
                 <div className="row">
                   <button className="success-btn" disabled={busyId === row.id} onClick={() => processRefund(row, true)}>Mark Refunded</button>
                   <button className="danger-btn" disabled={busyId === row.id} onClick={() => processRefund(row, false)}>Decline</button>
@@ -570,15 +577,23 @@ export default function RepHome() {
           <ul className="list">
             {sadyaCancelQueue.map((row) => (
               <li key={row.id} className="card card-accent">
-                <p style={{ margin: '0 0 0.3rem' }}>
-                  <strong>{towerName(row.paid_to_tower_id)} · Flat {row.flats?.flat_number ?? '—'}</strong>
-                  {row.resident?.name ? ` · ${row.resident.name}` : ''}
-                  {' '}· {sadyaPeople(row)}
-                  {' '}· refund <strong>{formatINR(row.amount)}</strong>
-                  {' '}· {row.total_persons} {row.total_persons === 1 ? 'pass' : 'passes'} cancelled
-                </p>
-                {row.reason && <p className="muted" style={{ margin: '0 0 0.4rem' }}>Reason: {row.reason}</p>}
-                <p className="muted" style={{ margin: '0 0 0.4rem' }}>These passes are already off the flat's QR. Pay the resident back, then mark it refunded — or decline to restore the passes.</p>
+                <div className="between" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <div>
+                    <strong style={{ fontSize: '1.05rem' }}>Flat {row.flats?.flat_number ?? '—'}</strong>
+                    <div className="muted" style={{ marginTop: '0.2rem', fontSize: '0.85rem' }}>
+                      {towerName(row.paid_to_tower_id)}{row.resident?.name ? ` · ${row.resident.name}` : ''}
+                    </div>
+                    <div className="muted" style={{ fontSize: '0.85rem' }}>
+                      {sadyaPeople(row)} · {row.total_persons} {row.total_persons === 1 ? 'pass' : 'passes'} cancelled
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{formatINR(row.amount)}</div>
+                    <div className="muted" style={{ fontSize: '0.75rem' }}>refund due</div>
+                  </div>
+                </div>
+                {row.reason && <p className="muted" style={{ margin: '0.7rem 0 0' }}>Reason: {row.reason}</p>}
+                <p className="muted" style={{ margin: '0.5rem 0 0.7rem' }}>These passes are already off the flat's QR. Pay the resident back, then mark it refunded — or decline to restore the passes.</p>
                 <div className="row">
                   <button className="success-btn" disabled={busyId === row.id} onClick={() => processSadyaCancel(row, true)}>Mark Refunded</button>
                   <button className="danger-btn" disabled={busyId === row.id} onClick={() => processSadyaCancel(row, false)}>Decline</button>

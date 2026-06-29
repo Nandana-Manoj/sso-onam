@@ -45,6 +45,25 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+// Supabase Auth applies a global signup rate limit (a refilling token bucket).
+// A launch-day registration spike can transiently exhaust it, surfacing as
+// "Request rate limit reached". That's retryable — back off briefly and try
+// again so the resident never sees the error. Non-rate-limit errors throw at once.
+async function withSignupRetry<T extends { error: { message: string } | null }>(
+  attempt: () => Promise<T>,
+  { retries = 3, baseDelayMs = 800 } = {},
+): Promise<T> {
+  let result = await attempt();
+  for (let i = 0; i < retries; i++) {
+    if (!result.error || !/rate limit/i.test(result.error.message)) return result;
+    // jittered exponential backoff: ~0.8s, ~1.6s, ~3.2s (+ up to 0.4s jitter)
+    const delay = baseDelayMs * 2 ** i + Math.random() * 400;
+    await new Promise((r) => setTimeout(r, delay));
+    result = await attempt();
+  }
+  return result;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -106,7 +125,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // --- phone-OTP mode helpers (used when OTP_ENABLED) ---
   async function startPhoneSignup(mobile: string, password: string) {
     // creates a phone-keyed user and triggers an OTP via the Send-SMS hook
-    const { error } = await supabase.auth.signUp({ phone: toE164(mobile), password });
+    const { error } = await withSignupRetry(() =>
+      supabase.auth.signUp({ phone: toE164(mobile), password }),
+    );
     if (error) throw error;
   }
 
@@ -202,10 +223,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function register(args: RegisterArgs) {
     const phone = toE164(args.mobile);
-    const { data, error } = await supabase.auth.signUp({
-      email: mobileToEmail(args.mobile),
-      password: args.password,
-    });
+    const { data, error } = await withSignupRetry(() =>
+      supabase.auth.signUp({
+        email: mobileToEmail(args.mobile),
+        password: args.password,
+      }),
+    );
     if (error) throw error;
     if (!data.session) {
       throw new Error(
