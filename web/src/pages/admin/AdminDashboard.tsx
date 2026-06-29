@@ -127,15 +127,15 @@ export default function AdminDashboard() {
 
           <RevenueDashboard towers={towers} flats={flats} contribs={contribs} sadya={sadya} cancellations={cancellations} />
 
-          <div className="card card-accent">
-            <h3>Record a Walk-In / Offline Payment</h3>
+          <details className="disclosure card card-accent">
+            <summary>Record a Walk-In / Offline Payment</summary>
             <p className="muted">For a resident who paid a rep directly without using the app — marks the flat as paid.</p>
             <OfflinePaymentForm
               towers={towers}
               sadyaPrices={{ adult: event.adult_sadya_price, child: event.child_sadya_price }}
               onRecorded={load}
             />
-          </div>
+          </details>
         </>
       )}
       {error && <p className="error">{error}</p>}

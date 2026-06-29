@@ -395,8 +395,8 @@ export default function RepHome() {
         </p>
       </div>
 
-      <div className="card card-accent">
-        <h3>Your Payment Details</h3>
+      <details className="disclosure card card-accent">
+        <summary>Your Payment Details</summary>
         <p className="muted">Used by residents in <strong>all towers you manage</strong>. Your UPI ID powers the resident's "pay" button but is never shown to them.</p>
         <label>UPI ID (for the pay button — not shown to residents)
           <input placeholder="e.g. ravi@okaxis" value={upiId} onChange={(e) => setUpiId(e.target.value)} />
@@ -418,7 +418,7 @@ export default function RepHome() {
         )}
         <button onClick={savePayment} disabled={contactBusy}>Save</button>
         {contactMsg && <p className={contactMsg.startsWith('Saved') || contactMsg.startsWith('QR') ? 'success' : 'error'}>{contactMsg}</p>}
-      </div>
+      </details>
 
       {/* ── Verification Queue ─────────────────────────────────────────── */}
       <div className="section-title">
@@ -595,11 +595,27 @@ export default function RepHome() {
       <div className="section-title"><h3>Your Towers</h3></div>
       <RevenueDashboard towers={towers} flats={flats} contribs={overviewContribs} sadya={overviewSadya} cancellations={overviewCancellations} />
 
-      {/* ── Settlement Section ─────────────────────────────────────────── */}
-      <div className="section-title"><h3>Settlements</h3></div>
-      <p className="muted" style={{ margin: '-0.4rem 0 0.6rem' }}>
-        Record each transfer you make to the organising committee. Your amount in hand updates automatically.
-      </p>
+      {/* ── Tower Leaderboard (all towers, for healthy competition) ───── */}
+      {eventId && (
+        <>
+          <div className="section-title"><h3>Tower Leaderboard</h3></div>
+          <TowerLeaderboard eventId={eventId} />
+        </>
+      )}
+
+      {/* ── Walk-In / Offline Payment (toggle) ─────────────────────────── */}
+      <details className="disclosure card card-accent">
+        <summary>Record a Walk-In / Offline Payment</summary>
+        <p className="muted">For residents who paid you directly without using the app. This marks the flat as paid (verified).</p>
+        <OfflinePaymentForm towers={towers} sadyaPrices={sadyaPrices} onRecorded={loadData} />
+      </details>
+
+      {/* ── Settlements (toggle, very end) ─────────────────────────────── */}
+      <details className="disclosure">
+        <summary>Settlements</summary>
+        <p className="muted" style={{ margin: '0.2rem 0 0.6rem' }}>
+          Record each transfer you make to the organising committee. Your amount in hand updates automatically.
+        </p>
       {towers.map((tower) => {
         const towerSettlements = settlements.filter((s) => s.tower_id === tower.id);
         const collected = towerCollected.get(tower.id) ?? 0;
@@ -677,21 +693,7 @@ export default function RepHome() {
           </div>
         );
       })}
-
-      {/* ── Tower Leaderboard (all towers, for healthy competition) ───── */}
-      {eventId && (
-        <>
-          <div className="section-title"><h3>Tower Leaderboard</h3></div>
-          <TowerLeaderboard eventId={eventId} />
-        </>
-      )}
-
-      {/* ── Walk-In / Offline Payment ──────────────────────────────────── */}
-      <div className="card card-accent">
-        <h3>Record a Walk-In / Offline Payment</h3>
-        <p className="muted">For residents who paid you directly without using the app. This marks the flat as paid (verified).</p>
-        <OfflinePaymentForm towers={towers} sadyaPrices={sadyaPrices} onRecorded={loadData} />
-      </div>
+      </details>
 
       {rejecting && (
         <Modal title="Reject This Payment?" onClose={() => setRejecting(null)}>

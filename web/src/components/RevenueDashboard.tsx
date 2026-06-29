@@ -83,7 +83,6 @@ function CombinedOverview({
     const t = byTower.get(id);
     return t ? t.contrib + t.sadya : 0;
   };
-  const maxTower = Math.max(1, ...towers.map((t) => towerTotal(t.id)));
 
   // Families = distinct flat_ids with a verified, non-refunded contribution per tower.
   const familiesByTower = new Map<string, Set<string>>();
@@ -186,22 +185,6 @@ function CombinedOverview({
             </tr>
           </tfoot>
         </table>
-      </div>
-
-      <div className="card">
-        <h3>Collected by Tower (Combined)</h3>
-        {towers.map((t) => {
-          const total = towerTotal(t.id);
-          const pct = total > 0 ? Math.max((total / maxTower) * 100, 4) : 0;
-          return (
-            <div className="bar-row" key={t.id}>
-              <span className="bar-name">{t.name}</span>
-              <span className="bar-track"><span className="bar-fill" style={{ width: `${pct}%` }} /></span>
-              <span className="bar-val">{formatINR(total)}</span>
-            </div>
-          );
-        })}
-        {towers.length === 0 && <p className="muted">No towers yet.</p>}
       </div>
     </>
   );
