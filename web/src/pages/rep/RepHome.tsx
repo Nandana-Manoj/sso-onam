@@ -455,16 +455,27 @@ export default function RepHome() {
                     style={{ marginTop: '0.2rem', cursor: 'pointer', flexShrink: 0 }}
                   />
                   <div style={{ flex: 1 }}>
-                    <p style={{ margin: '0 0 0.3rem' }}>
-                      <strong>{towerName(row.paid_to_tower_id)} · Flat {row.flats?.flat_number ?? '—'}</strong>
-                      {row.resident?.name ? <> · {row.resident.name}</> : null}
-                      {' '}· paid <strong>{formatINR(row.amount_paid ?? row.amount)}</strong>
-                      {row.utr ? <> · UTR <code>{row.utr}</code></> : <span className="muted"> · no UTR</span>}
-                    </p>
-                    <p className="muted" style={{ margin: '0 0 0.4rem' }}>
-                      Pledged {formatINR(row.amount)}
-                      {row.payment_submitted_at ? ` · submitted ${new Date(row.payment_submitted_at).toLocaleString()}` : ''}
-                    </p>
+                    <div className="between" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
+                      <div>
+                        <strong style={{ fontSize: '1.05rem' }}>Flat {row.flats?.flat_number ?? '—'}</strong>
+                        <div className="muted" style={{ marginTop: '0.2rem', fontSize: '0.85rem' }}>
+                          {towerName(row.paid_to_tower_id)}{row.resident?.name ? ` · ${row.resident.name}` : ''}
+                        </div>
+                        <div className="muted" style={{ fontSize: '0.85rem' }}>
+                          Pledged {formatINR(row.amount)}
+                          {' · '}{row.utr ? <>UTR <code>{row.utr}</code></> : 'no UTR'}
+                        </div>
+                        {row.payment_submitted_at && (
+                          <div className="muted" style={{ fontSize: '0.75rem' }}>
+                            Submitted {new Date(row.payment_submitted_at).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{formatINR(row.amount_paid ?? row.amount)}</div>
+                        <div className="muted" style={{ fontSize: '0.75rem' }}>paid</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="row">
@@ -546,16 +557,27 @@ export default function RepHome() {
                     style={{ marginTop: '0.2rem', cursor: 'pointer', flexShrink: 0 }}
                   />
                   <div style={{ flex: 1 }}>
-                    <p style={{ margin: '0 0 0.3rem' }}>
-                      <strong>{towerName(row.paid_to_tower_id)} · Flat {row.flats?.flat_number ?? '—'}</strong>
-                      {row.resident?.name ? ` · ${row.resident.name}` : ''} · paid{' '}
-                      <strong>{formatINR(row.amount_paid ?? row.total_amount)}</strong>
-                      {row.utr ? <> · UTR <code>{row.utr}</code></> : <span className="muted"> · no UTR</span>}
-                    </p>
-                    <p className="muted" style={{ margin: '0 0 0.4rem' }}>
-                      {sadyaPeople(row)} · {row.total_persons} {row.total_persons === 1 ? 'meal' : 'meals'}
-                      {row.payment_submitted_at ? ` · submitted ${new Date(row.payment_submitted_at).toLocaleString()}` : ''}
-                    </p>
+                    <div className="between" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
+                      <div>
+                        <strong style={{ fontSize: '1.05rem' }}>Flat {row.flats?.flat_number ?? '—'}</strong>
+                        <div className="muted" style={{ marginTop: '0.2rem', fontSize: '0.85rem' }}>
+                          {towerName(row.paid_to_tower_id)}{row.resident?.name ? ` · ${row.resident.name}` : ''}
+                        </div>
+                        <div className="muted" style={{ fontSize: '0.85rem' }}>
+                          {sadyaPeople(row)} · {row.total_persons} {row.total_persons === 1 ? 'meal' : 'meals'}
+                          {' · '}{row.utr ? <>UTR <code>{row.utr}</code></> : 'no UTR'}
+                        </div>
+                        {row.payment_submitted_at && (
+                          <div className="muted" style={{ fontSize: '0.75rem' }}>
+                            Submitted {new Date(row.payment_submitted_at).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{formatINR(row.amount_paid ?? row.total_amount)}</div>
+                        <div className="muted" style={{ fontSize: '0.75rem' }}>paid</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="row">
