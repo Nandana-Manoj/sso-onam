@@ -593,7 +593,7 @@ export default function RepHome() {
 
       {/* ── Revenue Dashboard ──────────────────────────────────────────── */}
       <div className="section-title"><h3>Your Towers</h3></div>
-      <RevenueDashboard towers={towers} flats={flats} contribs={overviewContribs} sadya={overviewSadya} cancellations={overviewCancellations} />
+      <RevenueDashboard towers={towers} flats={flats} contribs={overviewContribs} sadya={overviewSadya} cancellations={overviewCancellations} showPerTowerBreakdown={false} />
 
       {/* ── Tower Leaderboard (all towers, for healthy competition) ───── */}
       {eventId && (
@@ -611,12 +611,12 @@ export default function RepHome() {
       </details>
 
       {/* ── Settlements (toggle, very end) ─────────────────────────────── */}
-      <details className="disclosure">
+      <details className="disclosure card card-accent">
         <summary>Settlements</summary>
         <p className="muted" style={{ margin: '0.2rem 0 0.6rem' }}>
           Record each transfer you make to the organising committee. Your amount in hand updates automatically.
         </p>
-      {towers.map((tower) => {
+      {towers.map((tower, idx) => {
         const towerSettlements = settlements.filter((s) => s.tower_id === tower.id);
         const collected = towerCollected.get(tower.id) ?? 0;
         const settled = towerSettlements.reduce((s, r) => s + r.amount, 0);
@@ -625,7 +625,10 @@ export default function RepHome() {
         const inp = settleInputs[tower.id] ?? { amount: '', note: '' };
 
         return (
-          <div key={tower.id} className="card card-accent">
+          <div
+            key={tower.id}
+            style={idx > 0 ? { borderTop: '1px solid var(--line)', marginTop: '1rem', paddingTop: '1rem' } : undefined}
+          >
             <div className="between">
               <h3 style={{ margin: 0 }}>{tower.name}</h3>
               {allSettled && <span className="badge soft verified">Fully Settled ✓</span>}

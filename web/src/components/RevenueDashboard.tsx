@@ -24,13 +24,15 @@ const compactINR = (n: number) =>
 /** Revenue dashboard with a Combined / Contributions / Sadya switch. Reuses the
  *  existing contribution + sadya overviews; the combined view sums both streams. */
 export default function RevenueDashboard({
-  towers, flats, contribs, sadya, cancellations = [],
+  towers, flats, contribs, sadya, cancellations = [], showPerTowerBreakdown = true,
 }: {
   towers: OverviewTower[];
   flats: OverviewFlat[];
   contribs: OverviewContrib[];
   sadya: OverviewSadya[];
   cancellations?: OverviewCancellation[];
+  /** Hide the combined Per-Tower Breakdown table (reps see the leaderboard instead). */
+  showPerTowerBreakdown?: boolean;
 }) {
   const [mode, setMode] = useState<Mode>('combined');
 
@@ -55,14 +57,14 @@ export default function RevenueDashboard({
 
       {mode === 'contributions' && <ContributionOverview towers={towers} flats={flats} contribs={contribs} />}
       {mode === 'sadya' && <SadyaOverview towers={towers} sadya={sadya} cancellations={cancellations} />}
-      {mode === 'combined' && <CombinedOverview towers={towers} contribs={contribs} sadya={sadya} cancellations={cancellations} />}
+      {mode === 'combined' && <CombinedOverview towers={towers} contribs={contribs} sadya={sadya} cancellations={cancellations} showPerTowerBreakdown={showPerTowerBreakdown} />}
     </>
   );
 }
 
 function CombinedOverview({
-  towers, contribs, sadya, cancellations,
-}: { towers: OverviewTower[]; contribs: OverviewContrib[]; sadya: OverviewSadya[]; cancellations: OverviewCancellation[] }) {
+  towers, contribs, sadya, cancellations, showPerTowerBreakdown,
+}: { towers: OverviewTower[]; contribs: OverviewContrib[]; sadya: OverviewSadya[]; cancellations: OverviewCancellation[]; showPerTowerBreakdown: boolean }) {
   const contribTotal = contribs.reduce((s, c) => s + contribCollected(c), 0);
   const sadyaTotal = sadya.reduce((s, b) => s + sadyaCollected(b), 0)
     - cancellations.reduce((s, c) => s + sadyaRefunded(c), 0);
@@ -152,40 +154,42 @@ function CombinedOverview({
         />
       </div>
 
-      <div className="card">
-        <div className="between">
-          <h3>Per-Tower Breakdown</h3>
-          <button className="secondary" disabled={towers.length === 0} onClick={exportCsv}>Download CSV</button>
+      {showPerTowerBreakdown && (
+        <div className="card">
+          <div className="between">
+            <h3>Per-Tower Breakdown</h3>
+            <button className="secondary" disabled={towers.length === 0} onClick={exportCsv}>Download CSV</button>
+          </div>
+          <table className="tbl">
+            <thead>
+              <tr><th>Tower</th><th>Families</th><th>Sadya Passes</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+              {towers.map((t) => {
+                const families = familiesByTower.get(t.id)?.size ?? 0;
+                const passes = Math.max(0, sadyaPassesByTower.get(t.id) ?? 0);
+                const total = towerTotal(t.id);
+                return (
+                  <tr key={t.id}>
+                    <td>{t.name}</td>
+                    <td>{families || '—'}</td>
+                    <td>{passes || '—'}</td>
+                    <td>{total ? formatINR(total) : '—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th>Total</th>
+                <th />
+                <th />
+                <th>{formatINR(grandTotal)}</th>
+              </tr>
+            </tfoot>
+          </table>
         </div>
-        <table className="tbl">
-          <thead>
-            <tr><th>Tower</th><th>Families</th><th>Sadya Passes</th><th>Total</th></tr>
-          </thead>
-          <tbody>
-            {towers.map((t) => {
-              const families = familiesByTower.get(t.id)?.size ?? 0;
-              const passes = Math.max(0, sadyaPassesByTower.get(t.id) ?? 0);
-              const total = towerTotal(t.id);
-              return (
-                <tr key={t.id}>
-                  <td>{t.name}</td>
-                  <td>{families || '—'}</td>
-                  <td>{passes || '—'}</td>
-                  <td>{total ? formatINR(total) : '—'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th>Total</th>
-              <th />
-              <th />
-              <th>{formatINR(grandTotal)}</th>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      )}
     </>
   );
 }

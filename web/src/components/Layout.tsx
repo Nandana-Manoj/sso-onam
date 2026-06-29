@@ -41,21 +41,21 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="app">
-      {isStaging && (
-        <div style={{
-          background: '#fef3c7',
-          color: '#92400e',
-          textAlign: 'center',
-          padding: '0.4rem 1rem',
-          fontWeight: 600,
-          fontSize: '0.85rem',
-          borderBottom: '1px solid #fde68a',
-          letterSpacing: '0.3px',
-        }}>
-          This is for testing only — data here is not real
-        </div>
-      )}
-      <header className="app-header">
+      <div className="topbar">
+        {isStaging && (
+          <div style={{
+            background: '#fef3c7',
+            color: '#92400e',
+            textAlign: 'center',
+            padding: '0.4rem 1rem',
+            fontWeight: 700,
+            fontSize: '0.85rem',
+            letterSpacing: '0.3px',
+          }}>
+            This is for testing only — data here is not real
+          </div>
+        )}
+        <header className="app-header">
         <span className="brand">
           {logo ? <img className="brand-logo" src={logo} alt="" /> : <span>🌼</span>}
           {eventName ?? 'Onam'}
@@ -87,7 +87,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             Profile
           </NavLink>
         )}
-      </header>
+        </header>
+      </div>
       <main className="app-main">{children}</main>
     </div>
   );
