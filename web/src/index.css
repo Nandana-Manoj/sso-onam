@@ -238,6 +238,14 @@ input:focus, select:focus {
 }
 input[type="file"] { padding: 0.45rem; background: #fffdf9; cursor: pointer; }
 
+/* Checkboxes/radios must stay inline auto-width — the block/100% rule above is
+   for text inputs and would otherwise stretch a checkbox across the row. */
+input[type="checkbox"], input[type="radio"] {
+  display: inline-block;
+  width: auto;
+  margin-top: 0;
+}
+
 /* Locked (non-editable) fields read clearly as locked: muted, dashed, no caret. */
 input:disabled, input[readonly] {
   background: #f1ede6;
