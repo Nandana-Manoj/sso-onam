@@ -8,6 +8,7 @@ export interface Profile {
   tower_id: string | null;
   flat_id: string | null;
   claimed: boolean;
+  is_sadya_rep: boolean;
 }
 
 export interface PublicTower {
@@ -37,6 +38,7 @@ export interface EventConfig {
   logo_path: string | null;
   schedule_path: string | null;
   sadya_open: boolean;
+  sadya_serving_open: boolean;
   status?: 'draft' | 'open' | 'closed';
   closed_at?: string | null;
 }

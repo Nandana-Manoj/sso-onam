@@ -24,13 +24,15 @@ const compactINR = (n: number) =>
 /** Revenue dashboard with a Combined / Contributions / Sadya switch. Reuses the
  *  existing contribution + sadya overviews; the combined view sums both streams. */
 export default function RevenueDashboard({
-  towers, flats, contribs, sadya, cancellations = [],
+  towers, flats, contribs, sadya, cancellations = [], showPerTowerBreakdown = true,
 }: {
   towers: OverviewTower[];
   flats: OverviewFlat[];
   contribs: OverviewContrib[];
   sadya: OverviewSadya[];
   cancellations?: OverviewCancellation[];
+  /** Hide the combined Per-Tower Breakdown table (reps see the leaderboard instead). */
+  showPerTowerBreakdown?: boolean;
 }) {
   const [mode, setMode] = useState<Mode>('combined');
 
@@ -55,14 +57,14 @@ export default function RevenueDashboard({
 
       {mode === 'contributions' && <ContributionOverview towers={towers} flats={flats} contribs={contribs} />}
       {mode === 'sadya' && <SadyaOverview towers={towers} sadya={sadya} cancellations={cancellations} />}
-      {mode === 'combined' && <CombinedOverview towers={towers} contribs={contribs} sadya={sadya} cancellations={cancellations} />}
+      {mode === 'combined' && <CombinedOverview towers={towers} contribs={contribs} sadya={sadya} cancellations={cancellations} showPerTowerBreakdown={showPerTowerBreakdown} />}
     </>
   );
 }
 
 function CombinedOverview({
-  towers, contribs, sadya, cancellations,
-}: { towers: OverviewTower[]; contribs: OverviewContrib[]; sadya: OverviewSadya[]; cancellations: OverviewCancellation[] }) {
+  towers, contribs, sadya, cancellations, showPerTowerBreakdown,
+}: { towers: OverviewTower[]; contribs: OverviewContrib[]; sadya: OverviewSadya[]; cancellations: OverviewCancellation[]; showPerTowerBreakdown: boolean }) {
   const contribTotal = contribs.reduce((s, c) => s + contribCollected(c), 0);
   const sadyaTotal = sadya.reduce((s, b) => s + sadyaCollected(b), 0)
     - cancellations.reduce((s, c) => s + sadyaRefunded(c), 0);
@@ -83,16 +85,44 @@ function CombinedOverview({
     const t = byTower.get(id);
     return t ? t.contrib + t.sadya : 0;
   };
-  const maxTower = Math.max(1, ...towers.map((t) => towerTotal(t.id)));
+
+  // Families = distinct flat_ids with a verified, non-refunded contribution per tower.
+  const familiesByTower = new Map<string, Set<string>>();
+  contribs.forEach((c) => {
+    if (c.status === 'verified' && c.refund_state !== 'refunded') {
+      const s = familiesByTower.get(c.paid_to_tower_id) ?? new Set<string>();
+      s.add(c.flat_id);
+      familiesByTower.set(c.paid_to_tower_id, s);
+    }
+  });
+
+  // Sadya passes = verified total_persons minus refunded cancellation total_persons per tower.
+  const sadyaPassesByTower = new Map<string, number>();
+  sadya.forEach((b) => {
+    if (b.status === 'verified') {
+      sadyaPassesByTower.set(b.paid_to_tower_id, (sadyaPassesByTower.get(b.paid_to_tower_id) ?? 0) + b.total_persons);
+    }
+  });
+  cancellations.forEach((c) => {
+    if (c.status === 'refunded') {
+      sadyaPassesByTower.set(c.paid_to_tower_id, (sadyaPassesByTower.get(c.paid_to_tower_id) ?? 0) - c.total_persons);
+    }
+  });
 
   function exportCsv() {
     const stamp = new Date().toISOString().slice(0, 10);
-    const rows = towers.map((t) => {
-      const v = byTower.get(t.id) ?? { contrib: 0, sadya: 0 };
-      return [t.name, v.contrib, v.sadya, v.contrib + v.sadya];
-    });
-    rows.push(['Total', contribTotal, sadyaTotal, grandTotal]);
-    downloadCsv(`onam-combined-${stamp}.csv`, ['Tower', 'Contributions (Rs.)', 'Sadya (Rs.)', 'Total (Rs.)'], rows);
+    const rows = towers.map((t) => [
+      t.name,
+      familiesByTower.get(t.id)?.size ?? 0,
+      Math.max(0, sadyaPassesByTower.get(t.id) ?? 0),
+      towerTotal(t.id),
+    ]);
+    rows.push(['Total', '', '', grandTotal]);
+    downloadCsv(
+      `onam-combined-${stamp}.csv`,
+      ['Tower', 'Families Contributed', 'Sadya Passes Sold', 'Total (Rs.)'],
+      rows,
+    );
   }
 
   return (
@@ -124,54 +154,42 @@ function CombinedOverview({
         />
       </div>
 
-      <div className="card">
-        <div className="between">
-          <h3>Per-Tower Breakdown</h3>
-          <button className="secondary" disabled={towers.length === 0} onClick={exportCsv}>Download CSV</button>
+      {showPerTowerBreakdown && (
+        <div className="card">
+          <div className="between">
+            <h3>Per-Tower Breakdown</h3>
+            <button className="secondary" disabled={towers.length === 0} onClick={exportCsv}>Download CSV</button>
+          </div>
+          <table className="tbl">
+            <thead>
+              <tr><th>Tower</th><th>Families</th><th>Sadya Passes</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+              {towers.map((t) => {
+                const families = familiesByTower.get(t.id)?.size ?? 0;
+                const passes = Math.max(0, sadyaPassesByTower.get(t.id) ?? 0);
+                const total = towerTotal(t.id);
+                return (
+                  <tr key={t.id}>
+                    <td>{t.name}</td>
+                    <td>{families || '—'}</td>
+                    <td>{passes || '—'}</td>
+                    <td>{total ? formatINR(total) : '—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th>Total</th>
+                <th />
+                <th />
+                <th>{formatINR(grandTotal)}</th>
+              </tr>
+            </tfoot>
+          </table>
         </div>
-        <table className="tbl">
-          <thead>
-            <tr><th>Tower</th><th>Contributions</th><th>Sadya</th><th>Total</th></tr>
-          </thead>
-          <tbody>
-            {towers.map((t) => {
-              const v = byTower.get(t.id) ?? { contrib: 0, sadya: 0 };
-              return (
-                <tr key={t.id}>
-                  <td>{t.name}</td>
-                  <td>{v.contrib ? formatINR(v.contrib) : '—'}</td>
-                  <td>{v.sadya ? formatINR(v.sadya) : '—'}</td>
-                  <td>{v.contrib + v.sadya ? formatINR(v.contrib + v.sadya) : '—'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th>Total</th>
-              <th>{formatINR(contribTotal)}</th>
-              <th>{formatINR(sadyaTotal)}</th>
-              <th>{formatINR(grandTotal)}</th>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
-      <div className="card">
-        <h3>Collected by Tower (Combined)</h3>
-        {towers.map((t) => {
-          const total = towerTotal(t.id);
-          const pct = total > 0 ? Math.max((total / maxTower) * 100, 4) : 0;
-          return (
-            <div className="bar-row" key={t.id}>
-              <span className="bar-name">{t.name}</span>
-              <span className="bar-track"><span className="bar-fill" style={{ width: `${pct}%` }} /></span>
-              <span className="bar-val">{formatINR(total)}</span>
-            </div>
-          );
-        })}
-        {towers.length === 0 && <p className="muted">No towers yet.</p>}
-      </div>
+      )}
     </>
   );
 }

@@ -123,8 +123,8 @@ export default function AdminEvents() {
           <label>Year<input type="number" value={form.year} onChange={(e) => set('year', e.target.value)} required /></label>
           <div className="grid cols-3">
             <label>Min Contribution (₹)<input type="number" value={form.min_contribution} onChange={(e) => set('min_contribution', e.target.value)} required /></label>
-            <label>Adult Sadya (₹)<input type="number" value={form.adult_sadya_price} onChange={(e) => set('adult_sadya_price', e.target.value)} required /></label>
-            <label>Child &lt;5 (₹)<input type="number" value={form.child_sadya_price} onChange={(e) => set('child_sadya_price', e.target.value)} required /></label>
+            <label>Adult Sadya Cost (₹)<input type="number" value={form.adult_sadya_price} onChange={(e) => set('adult_sadya_price', e.target.value)} required /></label>
+            <label>Child &lt;5 Sadya Cost (₹)<input type="number" value={form.child_sadya_price} onChange={(e) => set('child_sadya_price', e.target.value)} required /></label>
           </div>
           <button type="submit" disabled={busy}>Create Event</button>
         </form>
@@ -184,6 +184,21 @@ function ActiveEventEditor({
     if (error) setMsg(error.message);
     else {
       setMsg(event.sadya_open ? 'Sadya booking closed.' : 'Sadya booking opened — residents can book now.');
+      onChanged();
+    }
+  }
+
+  async function toggleServing() {
+    setMsg(null);
+    setBusy(true);
+    const { error } = await supabase.rpc('set_sadya_serving_open', {
+      p_event_id: event.id,
+      p_open: !event.sadya_serving_open,
+    });
+    setBusy(false);
+    if (error) setMsg(error.message);
+    else {
+      setMsg(event.sadya_serving_open ? 'Sadya serving closed.' : 'Sadya serving opened — reps can scan passes now.');
       onChanged();
     }
   }
@@ -276,10 +291,10 @@ function ActiveEventEditor({
           <label>Min Contribution (₹)
             <input type="number" value={cfg.min_contribution} onChange={(e) => set('min_contribution', e.target.value)} />
           </label>
-          <label>Adult Sadya (₹)
+          <label>Adult Sadya Cost (₹)
             <input type="number" value={cfg.adult_sadya_price} onChange={(e) => set('adult_sadya_price', e.target.value)} />
           </label>
-          <label>Child &lt;5 (₹)
+          <label>Child &lt;5 Sadya Cost (₹)
             <input type="number" value={cfg.child_sadya_price} onChange={(e) => set('child_sadya_price', e.target.value)} />
           </label>
         </div>
@@ -327,6 +342,27 @@ function ActiveEventEditor({
             onClick={toggleSadya}
           >
             {event.sadya_open ? 'Close Booking' : 'Open Booking'}
+          </button>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: '0.9rem' }}>
+        <div className="between">
+          <div>
+            <h3 style={{ margin: 0 }}>Sadya Serving 🍽️</h3>
+            <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+              Sadya reps can scan and redeem passes only while this is open — open it on serving day.{' '}
+              <span className={`badge soft ${event.sadya_serving_open ? 'verified' : 'pending'}`}>
+                {event.sadya_serving_open ? 'Open' : 'Closed'}
+              </span>
+            </p>
+          </div>
+          <button
+            className={event.sadya_serving_open ? 'danger-btn' : 'success-btn'}
+            disabled={busy}
+            onClick={toggleServing}
+          >
+            {event.sadya_serving_open ? 'Close Serving' : 'Open Serving'}
           </button>
         </div>
       </div>

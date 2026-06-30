@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleHome from './components/RoleHome';
@@ -14,6 +15,10 @@ import AdminAdmins from './pages/admin/AdminAdmins';
 import AdminTowers from './pages/admin/AdminTowers';
 import AdminEvents from './pages/admin/AdminEvents';
 import AdminReps from './pages/admin/AdminReps';
+import AdminSadyaReps from './pages/admin/AdminSadyaReps';
+
+// Lazy — pulls in the html5-qrcode camera lib only when a sadya rep opens the scanner.
+const SadyaScan = lazy(() => import('./pages/SadyaScan'));
 
 export default function App() {
   return (
@@ -30,6 +35,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<RoleHome />} />
         <Route path="/home" element={<ResidentHome />} />
+        <Route path="/scan" element={<Suspense fallback={<div className="page"><p className="muted">Loading scanner…</p></div>}><SadyaScan /></Suspense>} />
         <Route path="/profile" element={<Profile />} />
       </Route>
 
@@ -46,6 +52,7 @@ export default function App() {
         <Route path="/admin/towers" element={<AdminTowers />} />
         <Route path="/admin/events" element={<AdminEvents />} />
         <Route path="/admin/reps" element={<AdminReps />} />
+        <Route path="/admin/sadya-reps" element={<AdminSadyaReps />} />
       </Route>
 
       <Route path="*" element={<RoleHome />} />
