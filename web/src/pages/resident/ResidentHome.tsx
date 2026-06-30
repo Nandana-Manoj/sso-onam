@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import type { EventConfig } from '../../lib/types';
@@ -73,6 +74,13 @@ export default function ResidentHome() {
                 )}
               </div>
             </details>
+          )}
+
+          {profile?.is_sadya_rep && (
+            <Link to="/scan" className="card link-card">
+              <h3>🍽️ Scan Sadya Passes</h3>
+              <p className="muted">You're a sadya rep — scan flat QR passes at the serving counter.</p>
+            </Link>
           )}
 
           <ContributionPanel event={event} />

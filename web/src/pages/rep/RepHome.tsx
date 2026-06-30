@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { formatINR } from '../../lib/format';
@@ -394,6 +395,13 @@ export default function RepHome() {
           Managing <strong>{towers.map((t) => t.name).join(', ')}</strong>
         </p>
       </div>
+
+      {(profile?.is_sadya_rep || profile?.role === 'admin') && (
+        <Link to="/scan" className="card link-card">
+          <h3>🍽️ Scan Sadya Passes</h3>
+          <p className="muted">Scan flat QR passes and redeem meals at the serving counter.</p>
+        </Link>
+      )}
 
       <details className="disclosure card card-accent">
         <summary>Your Payment Details</summary>

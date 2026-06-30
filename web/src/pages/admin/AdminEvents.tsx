@@ -188,6 +188,21 @@ function ActiveEventEditor({
     }
   }
 
+  async function toggleServing() {
+    setMsg(null);
+    setBusy(true);
+    const { error } = await supabase.rpc('set_sadya_serving_open', {
+      p_event_id: event.id,
+      p_open: !event.sadya_serving_open,
+    });
+    setBusy(false);
+    if (error) setMsg(error.message);
+    else {
+      setMsg(event.sadya_serving_open ? 'Sadya serving closed.' : 'Sadya serving opened — reps can scan passes now.');
+      onChanged();
+    }
+  }
+
   async function closeEvent() {
     setBusy(true);
     onMessage(null);
@@ -327,6 +342,27 @@ function ActiveEventEditor({
             onClick={toggleSadya}
           >
             {event.sadya_open ? 'Close Booking' : 'Open Booking'}
+          </button>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: '0.9rem' }}>
+        <div className="between">
+          <div>
+            <h3 style={{ margin: 0 }}>Sadya Serving 🍽️</h3>
+            <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+              Sadya reps can scan and redeem passes only while this is open — open it on serving day.{' '}
+              <span className={`badge soft ${event.sadya_serving_open ? 'verified' : 'pending'}`}>
+                {event.sadya_serving_open ? 'Open' : 'Closed'}
+              </span>
+            </p>
+          </div>
+          <button
+            className={event.sadya_serving_open ? 'danger-btn' : 'success-btn'}
+            disabled={busy}
+            onClick={toggleServing}
+          >
+            {event.sadya_serving_open ? 'Close Serving' : 'Open Serving'}
           </button>
         </div>
       </div>

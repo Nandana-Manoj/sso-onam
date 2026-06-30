@@ -22,6 +22,14 @@ export default function AdminHome() {
           <h3>🛡️ Admins</h3>
           <p className="muted">Grant or revoke admin access for other residents.</p>
         </Link>
+        <Link to="/admin/sadya-reps" className="card link-card">
+          <h3>🍽️ Sadya Reps</h3>
+          <p className="muted">Grant residents the ability to scan sadya passes at the counter.</p>
+        </Link>
+        <Link to="/scan" className="card link-card">
+          <h3>📷 Scan Sadya Passes</h3>
+          <p className="muted">Scan flat QR passes and redeem meals at the serving counter.</p>
+        </Link>
       </div>
 
       <div className="section-title"><h3>Setup</h3></div>
