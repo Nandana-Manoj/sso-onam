@@ -14,16 +14,32 @@ export default function ResidentHome() {
   const [repContact, setRepContact] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Refetch on mount and whenever the resident returns to this tab, so an
+  // admin toggling sadya booking open/closed (or the contribution phase)
+  // takes effect without a manual reload.
   useEffect(() => {
-    supabase
-      .from('events')
-      .select('*')
-      .eq('is_active', true)
-      .maybeSingle()
-      .then(({ data }) => {
-        setEvent((data as EventConfig | null) ?? null);
-        setLoading(false);
-      });
+    let cancelled = false;
+    const load = () => {
+      supabase
+        .from('events')
+        .select('*')
+        .eq('is_active', true)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (cancelled || error) return;
+          setEvent((data as EventConfig | null) ?? null);
+          setLoading(false);
+        });
+    };
+    load();
+    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', load);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', load);
+    };
   }, []);
 
   useEffect(() => {
