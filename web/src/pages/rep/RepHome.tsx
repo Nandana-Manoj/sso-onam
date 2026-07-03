@@ -42,7 +42,7 @@ export default function RepHome() {
         </p>
       </div>
 
-      <div className="section-title"><h3>Event Day</h3></div>
+      <div className="section-title"><h3>Event Related</h3></div>
       <div className="grid cols-2">
         <Link to="/rep/verify" className="card link-card">
           <div className="between">

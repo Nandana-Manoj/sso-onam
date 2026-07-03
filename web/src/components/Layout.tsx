@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { assetUrl, prettyRole } from '../lib/ui';
 import Modal from './Modal';
 import HelpContact from './HelpContact';
+import SuggestionModal from './SuggestionModal';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
@@ -12,6 +13,8 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [eventName, setEventName] = useState<string | null>(null);
   const [flatInfo, setFlatInfo] = useState<{ flat: string; tower: string } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSuggest, setShowSuggest] = useState(false);
+  const canSuggest = profile?.role === 'tower_rep' || profile?.role === 'admin';
 
   useEffect(() => {
     supabase
@@ -69,6 +72,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <NavLink to="/rep" className={({ isActive }) => (isActive ? 'active' : '')}>Rep Tools</NavLink>
             <NavLink to="/home" className={({ isActive }) => (isActive ? 'active' : '')}>My Flat</NavLink>
             <button type="button" className="head-nav-btn" onClick={() => setShowHelp(true)}>Help</button>
+            <button type="button" className="head-nav-btn" onClick={() => setShowSuggest(true)}>Suggestions</button>
           </nav>
         )}
         {profile?.role === 'admin' && (
@@ -76,9 +80,10 @@ export default function Layout({ children }: { children: ReactNode }) {
             <NavLink to="/admin" className={({ isActive }) => (isActive ? 'active' : '')}>Admin</NavLink>
             <NavLink to="/home" className={({ isActive }) => (isActive ? 'active' : '')}>My Flat</NavLink>
             <button type="button" className="head-nav-btn" onClick={() => setShowHelp(true)}>Help</button>
+            <button type="button" className="head-nav-btn" onClick={() => setShowSuggest(true)}>Suggestions</button>
           </nav>
         )}
-        {profile?.role !== 'tower_rep' && profile?.role !== 'admin' && profile && (
+        {!canSuggest && profile && (
           <nav className="head-nav">
             <button type="button" className="head-nav-btn" onClick={() => setShowHelp(true)}>Help</button>
           </nav>
@@ -108,6 +113,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <HelpContact />
         </Modal>
       )}
+      {showSuggest && canSuggest && <SuggestionModal onClose={() => setShowSuggest(false)} />}
     </div>
   );
 }

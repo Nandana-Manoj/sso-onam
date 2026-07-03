@@ -95,7 +95,7 @@ a:hover { text-decoration: underline; }
   width: 34px; height: 34px; border-radius: 9px; object-fit: cover;
   background: rgba(255,255,255,0.25); padding: 2px;
 }
-.head-nav { display: flex; gap: 0.3rem; margin-left: 0.5rem; }
+.head-nav { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-left: 0.5rem; }
 .head-nav a {
   color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600;
   padding: 0.35rem 0.7rem; border-radius: 999px; text-decoration: none;
@@ -224,7 +224,7 @@ a:hover { text-decoration: underline; }
 
 /* ---------- Forms ---------- */
 label { display: block; margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
-input, select {
+input, select, textarea {
   display: block;
   width: 100%;
   margin-top: 0.3rem;
@@ -237,7 +237,8 @@ input, select {
   color: var(--text);
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
-input:focus, select:focus {
+textarea { resize: vertical; min-height: 5.5rem; }
+input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--saffron);
   box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
