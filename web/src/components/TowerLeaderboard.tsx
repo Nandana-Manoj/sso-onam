@@ -36,7 +36,7 @@ export default function TowerLeaderboard({ eventId }: { eventId: string }) {
           <tr>
             <th>#</th>
             <th>Tower</th>
-            <th>Families</th>
+            <th>Contributing Families</th>
             <th>Sadya Passes</th>
             <th>Total</th>
           </tr>

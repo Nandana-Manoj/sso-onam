@@ -3,12 +3,18 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { assetUrl, prettyRole } from '../lib/ui';
+import Modal from './Modal';
+import HelpContact from './HelpContact';
+import SuggestionModal from './SuggestionModal';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
   const [logo, setLogo] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string | null>(null);
   const [flatInfo, setFlatInfo] = useState<{ flat: string; tower: string } | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showSuggest, setShowSuggest] = useState(false);
+  const canSuggest = profile?.role === 'tower_rep' || profile?.role === 'admin';
 
   useEffect(() => {
     supabase
@@ -65,12 +71,21 @@ export default function Layout({ children }: { children: ReactNode }) {
           <nav className="head-nav">
             <NavLink to="/rep" className={({ isActive }) => (isActive ? 'active' : '')}>Rep Tools</NavLink>
             <NavLink to="/home" className={({ isActive }) => (isActive ? 'active' : '')}>My Flat</NavLink>
+            <button type="button" className="head-nav-btn" onClick={() => setShowHelp(true)}>Help</button>
+            <button type="button" className="head-nav-btn" onClick={() => setShowSuggest(true)}>Suggestions</button>
           </nav>
         )}
         {profile?.role === 'admin' && (
           <nav className="head-nav">
             <NavLink to="/admin" className={({ isActive }) => (isActive ? 'active' : '')}>Admin</NavLink>
             <NavLink to="/home" className={({ isActive }) => (isActive ? 'active' : '')}>My Flat</NavLink>
+            <button type="button" className="head-nav-btn" onClick={() => setShowHelp(true)}>Help</button>
+            <button type="button" className="head-nav-btn" onClick={() => setShowSuggest(true)}>Suggestions</button>
+          </nav>
+        )}
+        {!canSuggest && profile && (
+          <nav className="head-nav">
+            <button type="button" className="head-nav-btn" onClick={() => setShowHelp(true)}>Help</button>
           </nav>
         )}
 
@@ -90,6 +105,15 @@ export default function Layout({ children }: { children: ReactNode }) {
         </header>
       </div>
       <main className="app-main">{children}</main>
+      {showHelp && (
+        <Modal title="Need Help?" onClose={() => setShowHelp(false)}>
+          <p className="muted" style={{ marginTop: 0 }}>
+            Facing an issue or have a question about the app? Reach out and we'll help you out.
+          </p>
+          <HelpContact />
+        </Modal>
+      )}
+      {showSuggest && canSuggest && <SuggestionModal onClose={() => setShowSuggest(false)} />}
     </div>
   );
 }
