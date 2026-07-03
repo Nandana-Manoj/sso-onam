@@ -102,6 +102,12 @@ a:hover { text-decoration: underline; }
 }
 .head-nav a:hover { background: rgba(255,255,255,0.16); text-decoration: none; }
 .head-nav a.active { background: rgba(255,255,255,0.24); color: #fff; }
+.head-nav-btn {
+  color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600;
+  padding: 0.35rem 0.7rem; margin: 0; border-radius: 999px;
+  background: transparent; border: none; box-shadow: none; font-family: inherit;
+}
+.head-nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.16); transform: none; box-shadow: none; }
 .spacer { flex: 1; }
 .who { font-size: 0.85rem; color: rgba(255,255,255,0.92); text-align: right; }
 .who strong { display: block; font-weight: 700; }
@@ -461,6 +467,20 @@ code { background: #f4ecdd; padding: 0.05rem 0.35rem; border-radius: 6px; font-s
 .modal-card h3 { margin-top: 0; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+/* ---------- Help / support card ---------- */
+.help-contact { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.6rem; }
+.help-row {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: #fffdf9; color: var(--text);
+  font-weight: 600; text-decoration: none;
+  min-width: 0; /* let the value shrink so long emails wrap instead of spilling */
+}
+a.help-row:hover { border-color: var(--line-strong); background: #fffaf3; text-decoration: none; }
+.help-icon { flex-shrink: 0; font-size: 1.05rem; }
+.help-val { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 
 /* ---------- Misc ---------- */
 .divider { height: 1px; background: var(--line); margin: 1rem 0; border: none; }

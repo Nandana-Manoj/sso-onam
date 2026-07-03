@@ -9,6 +9,11 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import Profile from './pages/Profile';
 import ResidentHome from './pages/resident/ResidentHome';
 import RepHome from './pages/rep/RepHome';
+import RepVerify from './pages/rep/RepVerify';
+import RepDashboard from './pages/rep/RepDashboard';
+import RepWalkIn from './pages/rep/RepWalkIn';
+import RepSettlements from './pages/rep/RepSettlements';
+import RepPayment from './pages/rep/RepPayment';
 import AdminHome from './pages/admin/AdminHome';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminAdmins from './pages/admin/AdminAdmins';
@@ -42,6 +47,11 @@ export default function App() {
       {/* Tower Rep + Admin */}
       <Route element={<ProtectedRoute roles={['tower_rep', 'admin']} />}>
         <Route path="/rep" element={<RepHome />} />
+        <Route path="/rep/verify" element={<RepVerify />} />
+        <Route path="/rep/dashboard" element={<RepDashboard />} />
+        <Route path="/rep/walk-in" element={<RepWalkIn />} />
+        <Route path="/rep/settlements" element={<RepSettlements />} />
+        <Route path="/rep/payment" element={<RepPayment />} />
       </Route>
 
       {/* Admin only */}

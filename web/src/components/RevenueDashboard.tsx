@@ -162,7 +162,7 @@ function CombinedOverview({
           </div>
           <table className="tbl">
             <thead>
-              <tr><th>Tower</th><th>Families</th><th>Sadya Passes</th><th>Total</th></tr>
+              <tr><th>Tower</th><th>Contributing Families</th><th>Sadya Passes</th><th>Total</th></tr>
             </thead>
             <tbody>
               {towers.map((t) => {

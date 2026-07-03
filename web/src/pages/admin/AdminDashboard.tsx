@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import OfflinePaymentForm from '../../components/OfflinePaymentForm';
 import RevenueDashboard from '../../components/RevenueDashboard';
+import SadyaScanOverview from '../../components/SadyaScanOverview';
 import {
   type OverviewContrib, type OverviewFlat, type OverviewTower,
 } from '../../components/ContributionOverview';
@@ -126,6 +127,8 @@ export default function AdminDashboard() {
           <p className="muted">{event.name} · revenue</p>
 
           <RevenueDashboard towers={towers} flats={flats} contribs={contribs} sadya={sadya} cancellations={cancellations} />
+
+          <SadyaScanOverview eventId={event.id} servingOpen={event.sadya_serving_open} />
 
           <details className="disclosure card card-accent">
             <summary>Record a Walk-In / Offline Payment</summary>
