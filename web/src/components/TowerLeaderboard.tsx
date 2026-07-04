@@ -18,7 +18,14 @@ export default function TowerLeaderboard({ eventId }: { eventId: string }) {
     supabase
       .rpc('get_tower_leaderboard', { p_event_id: eventId })
       .then(({ data }) => {
-        setRows((data as LeaderboardRow[]) ?? []);
+        // The RPC ties on tower_name with a plain SQL string sort ("Tower 10"
+        // before "Tower 2"); re-sort ties with a natural comparator, same as
+        // every other tower list in the app (see byName in lib/ui.ts).
+        const sorted = ((data as LeaderboardRow[]) ?? []).slice().sort((a, b) =>
+          b.total_amount - a.total_amount
+          || a.tower_name.localeCompare(b.tower_name, undefined, { numeric: true, sensitivity: 'base' }),
+        );
+        setRows(sorted);
         setLoading(false);
       });
   }, [eventId]);

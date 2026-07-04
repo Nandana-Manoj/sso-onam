@@ -70,6 +70,7 @@ export interface RepData {
   settlements: SettlementRow[];
   sadyaPrices: { adult: number; child: number } | undefined;
   eventId: string | null;
+  sadyaOpen: boolean;
   servingOpen: boolean;
   reload: () => Promise<void>;
 }
@@ -87,6 +88,7 @@ export function useRepData(): RepData {
   const [settlements, setSettlements] = useState<SettlementRow[]>([]);
   const [sadyaPrices, setSadyaPrices] = useState<{ adult: number; child: number } | undefined>(undefined);
   const [eventId, setEventId] = useState<string | null>(null);
+  const [sadyaOpen, setSadyaOpen] = useState(false);
   const [servingOpen, setServingOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +102,7 @@ export function useRepData(): RepData {
         .select('id, name, rep_contact, rep_upi_id, rep_payment_phone, payment_qr_path')
         .eq('rep_user_id', profile.id),
       supabase.from('events')
-        .select('id, adult_sadya_price, child_sadya_price, sadya_serving_open')
+        .select('id, adult_sadya_price, child_sadya_price, sadya_open, sadya_serving_open')
         .eq('is_active', true).maybeSingle(),
     ]);
 
@@ -108,10 +110,11 @@ export function useRepData(): RepData {
     setTowers(managed);
 
     const evp = ev as {
-      id: string; adult_sadya_price: number; child_sadya_price: number; sadya_serving_open: boolean;
+      id: string; adult_sadya_price: number; child_sadya_price: number; sadya_open: boolean; sadya_serving_open: boolean;
     } | null;
-    setSadyaPrices(evp ? { adult: evp.adult_sadya_price, child: evp.child_sadya_price } : undefined);
+    setSadyaPrices(evp?.sadya_open ? { adult: evp.adult_sadya_price, child: evp.child_sadya_price } : undefined);
     setEventId(evp?.id ?? null);
+    setSadyaOpen(!!evp?.sadya_open);
     setServingOpen(!!evp?.sadya_serving_open);
 
     const ids = managed.map((t) => t.id);
@@ -158,7 +161,7 @@ export function useRepData(): RepData {
 
   return {
     loading, error, towers, flats, contribs, sadya, sadyaCancels, settlements,
-    sadyaPrices, eventId, servingOpen, reload,
+    sadyaPrices, eventId, sadyaOpen, servingOpen, reload,
   };
 }
 

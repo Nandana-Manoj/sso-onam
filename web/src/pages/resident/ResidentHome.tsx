@@ -71,7 +71,8 @@ export default function ResidentHome() {
             {logo && <img className="hero-logo" src={logo} alt="" />}
             <h2>Onam Greetings, {profile?.name?.split(' ')[0]}! 🌼</h2>
             <p className="hero-sub">
-              {event.name} · Minimum {formatINR(event.min_contribution)} per flat · Sadya {formatINR(event.adult_sadya_price)}/adult
+              {event.name} · Minimum {formatINR(event.min_contribution)} per flat
+              {event.sadya_open && ` · Sadya ${formatINR(event.adult_sadya_price)}/adult`}
             </p>
           </div>
 
@@ -99,16 +100,16 @@ export default function ResidentHome() {
             </Link>
           )}
 
-          <ContributionPanel event={event} />
-
-          <SadyaPanel event={event} />
-
           <div className="card">
             <h3>Your Tower Rep</h3>
             {repContact
               ? <p style={{ margin: 0 }}>{repContact}</p>
               : <p className="muted" style={{ margin: 0 }}>Your tower's rep hasn't added their contact yet.</p>}
           </div>
+
+          <ContributionPanel event={event} />
+
+          <SadyaPanel event={event} />
         </>
       )}
     </div>
