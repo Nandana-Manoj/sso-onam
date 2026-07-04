@@ -15,10 +15,11 @@ const sadyaCollected = (s: OverviewSadya) =>
   s.status === 'verified' ? Number(s.amount_paid ?? s.total_amount) : 0;
 const sadyaRefunded = (c: OverviewCancellation) => (c.status === 'refunded' ? c.amount : 0);
 
-/** Short rupee label that fits inside the donut centre (e.g. ₹2.4L, ₹45k). */
+/** Short rupee label that fits inside the donut centre (e.g. ₹2.4L, ₹45k, ₹2.5k). */
 const compactINR = (n: number) =>
   n >= 100000 ? `₹${(n / 100000).toFixed(1)}L`
-  : n >= 1000 ? `₹${Math.round(n / 1000)}k`
+  : n >= 10000 ? `₹${Math.round(n / 1000)}k`
+  : n >= 1000 ? `₹${(n / 1000).toFixed(1)}k`
   : formatINR(n);
 
 /** Revenue dashboard with a Combined / Contributions / Sadya switch. Reuses the
