@@ -56,6 +56,27 @@ collection ledger/donut attributes them correctly.
 Cleanup deletes **only** rows matching these sentinels, so it never touches real
 or tester-created data:
 
-- Towers with code `TTA` / `TTB` / `TTC`
+- Towers with code `TTA` / `TTB` / `TTC` / `TTD`
 - The event with `year = 9999`
 - Profiles whose `mobile` starts `+919999000`
+
+## Prod-test scripts (opt-in, final pass only — separate from the above)
+
+`seed-prod-test.mjs` / `reset-prod-test.mjs` do the same thing against
+**production**, for a final pre-launch validation pass before real users
+exist. Deliberately more ceremony than the staging scripts — see
+[`.env.prod-test.example`](../../.env.prod-test.example) and
+`_lib_prod_test.mjs`: three separate confirmations are required (an
+`EXPECTED_PROD_URL` that must exactly match, an `I_UNDERSTAND_THIS_IS_PRODUCTION=true`
+env var, and a distinct `--yes-this-is-prod` flag instead of `--yes`), so
+muscle memory from the staging scripts can never fire these against prod by
+accident.
+
+```
+node --env-file=.env.prod-test web/scripts/seed-prod-test.mjs --yes-this-is-prod
+node --env-file=.env.prod-test web/scripts/reset-prod-test.mjs --yes-this-is-prod
+```
+
+**Always run `reset-prod-test.mjs` immediately after** — never leave sentinel
+data sitting in production. `npm run test:integration:prod` / `test:e2e:prod`
+wrap the same seed → test → reset lifecycle automatically.

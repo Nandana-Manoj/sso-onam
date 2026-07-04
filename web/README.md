@@ -1,3 +1,24 @@
+## Testing
+
+Three tiers, see `tests/` and the plan this was built from:
+
+```bash
+npm run test              # unit + component (jsdom, no network) — format.ts, ProtectedRoute, SuggestionModal
+npm run test:integration  # RLS/RPC suite against a REAL Supabase project (staging by default)
+npm run test:e2e          # Playwright, drives a real browser + `vite --mode staging` against staging
+
+# Opt-in final pre-launch pass against production (see ../.env.prod-test.example):
+npm run test:integration:prod
+npm run test:e2e:prod
+```
+
+`test:integration*` / `test:e2e*` need `../.env.staging` (or `../.env.prod-test`) at the
+repo root with `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_ANON_KEY`, and
+`test:e2e*` additionally need `web/.env.staging` (or `web/.env.prod-test`) with the
+`VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` frontend values — see the `.example` files
+next to each. Every test run seeds a sentinel-tagged dataset (`web/tests/fixtures/world.ts`,
+same sentinels as `web/scripts/_lib.mjs`) and tears it down afterward.
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

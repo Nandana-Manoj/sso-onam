@@ -7,7 +7,14 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run tests/unit tests/component",
+    "test:unit": "vitest run tests/unit",
+    "test:component": "vitest run tests/component",
+    "test:integration": "node --env-file=../.env.staging node_modules/vitest/vitest.mjs run tests/integration",
+    "test:integration:prod": "node --env-file=../.env.prod-test node_modules/vitest/vitest.mjs run tests/integration",
+    "test:e2e": "node --env-file=../.env.staging node_modules/@playwright/test/cli.js test",
+    "test:e2e:prod": "node --env-file=../.env.prod-test node_modules/@playwright/test/cli.js test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
@@ -20,6 +27,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^24.12.3",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.2.14",
@@ -29,8 +40,10 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "jsdom": "^29.1.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "vitest": "^4.1.9"
   }
 }

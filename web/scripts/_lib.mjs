@@ -16,7 +16,7 @@ import { createClient } from '@supabase/supabase-js';
 export const SENT = {
   eventYear: 9999, // sentinel year — no real Onam edition will ever use it
   eventName: 'TEST — Onam Seed Event',
-  towerCodes: ['TTA', 'TTB', 'TTC'],
+  towerCodes: ['TTA', 'TTB', 'TTC', 'TTD'], // TTD: reserved for multi-tower-rep test fixtures
   mobilePrefix: '+919999000', // reserved fake range; matched as LIKE '+919999000%'
   phoneEmailDomain: 'phone.sso-onam.com', // must match web/src/lib/format.ts
   password: 'OnamTest#2026', // shared login for every seeded account
@@ -145,25 +145,79 @@ export async function cleanupTestData(db) {
   if (tErr) throw new Error(`select towers: ${tErr.message}`);
   const towerIds = (towers ?? []).map((t) => t.id);
 
+  // Flats under sentinel towers — needed so transactional rows created via an
+  // RPC that always targets "whichever event is currently active" (create_
+  // contribution, create_sadya_booking, record_offline_sadya, ...) still get
+  // found and removed even when that active event ISN'T the sentinel event
+  // (e.g. testing against a project — prod included — that already has a
+  // real event live). Scoping cleanup by event_id alone would silently leave
+  // those rows behind. See fixtures/world.ts and the prod-test docs.
+  const { data: flats, error: flErr } = await db
+    .from('flats')
+    .select('id')
+    .in('tower_id', towerIds.length ? towerIds : ['00000000-0000-0000-0000-000000000000']);
+  if (flErr) throw new Error(`select flats: ${flErr.message}`);
+  const flatIds = (flats ?? []).map((f) => f.id);
+
+  const { data: qrPasses, error: qpErr } = await db
+    .from('qr_passes')
+    .select('id')
+    .in('flat_id', flatIds.length ? flatIds : ['00000000-0000-0000-0000-000000000000']);
+  if (qpErr) throw new Error(`select qr_passes: ${qpErr.message}`);
+  const qrPassIds = (qrPasses ?? []).map((p) => p.id);
+
+  // Auth users, enumerated directly by email prefix (not joined through
+  // profiles) so an auth user orphaned by a partial/failed prior cleanup
+  // (profile already gone, auth user left behind) is still found here, up
+  // front — several tables below (audit_log, suggestions) reference actors
+  // by user id with NO cascade/set-null, independent of any event, so they
+  // must be cleaned by user id, not just by event id.
+  const emailPrefix = SENT.mobilePrefix.replace(/\D/g, ''); // '+919999000' -> '919999000'
+  const sentinelUserIds = [];
+  for (let page = 1; ; page++) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw new Error(`listUsers: ${error.message}`);
+    const users = data?.users ?? [];
+    for (const u of users) {
+      if (u.email?.startsWith(emailPrefix)) sentinelUserIds.push(u.id);
+    }
+    if (users.length < 200) break;
+  }
+
   // Transactional children of the test event (covers Phase 2 tables too).
-  await del('audit_log', 'audit_log', 'event_id', eventIds);
-  await del('redemptions', 'redemptions', 'event_id', eventIds);
-  await del('qr_passes', 'qr_passes', 'event_id', eventIds);
-  await del('sadya_bookings', 'sadya_bookings', 'event_id', eventIds);
+  // audit_log rows aren't all event-scoped (role/rep-management actions like
+  // grant_admin write event_id = null), so also sweep by actor_user_id —
+  // otherwise a sentinel admin/rep who ever took such an action becomes
+  // permanently un-deletable (audit_log.actor_user_id has no cascade, by
+  // design — it's meant to survive the actor being removed).
+  await del('audit_log (by event)', 'audit_log', 'event_id', eventIds);
+  await del('audit_log (by actor)', 'audit_log', 'actor_user_id', sentinelUserIds);
+  await del('redemptions (by event)', 'redemptions', 'event_id', eventIds);
+  await del('redemptions (by pass)', 'redemptions', 'qr_pass_id', qrPassIds);
+  await del('qr_passes (by event)', 'qr_passes', 'event_id', eventIds);
+  await del('qr_passes (by flat)', 'qr_passes', 'flat_id', flatIds);
+  await del('sadya_cancellations (by event)', 'sadya_cancellations', 'event_id', eventIds);
+  await del('sadya_cancellations (by flat)', 'sadya_cancellations', 'flat_id', flatIds);
+  await del('sadya_bookings (by event)', 'sadya_bookings', 'event_id', eventIds);
+  await del('sadya_bookings (by flat)', 'sadya_bookings', 'flat_id', flatIds);
+  await del('sadya_bookings (by resident)', 'sadya_bookings', 'resident_id', sentinelUserIds);
   await del('refund_requests', 'refund_requests', 'event_id', eventIds);
   await del('fund_handovers', 'fund_handovers', 'event_id', eventIds);
-  await del('contributions', 'contributions', 'event_id', eventIds);
+  await del('contributions (by event)', 'contributions', 'event_id', eventIds);
+  await del('contributions (by flat)', 'contributions', 'flat_id', flatIds);
+  await del('contributions (by initiator)', 'contributions', 'initiated_by_user_id', sentinelUserIds);
 
-  // Auth users for seeded profiles → cascade-deletes their profiles rows.
-  const { data: profs, error: pErr } = await db
-    .from('profiles')
-    .select('id')
-    .like('mobile', `${SENT.mobilePrefix}%`);
-  if (pErr) throw new Error(`select profiles: ${pErr.message}`);
+  // suggestions.submitted_by_user_id -> profiles(id) has no ON DELETE action
+  // (by design — it's an intentionally unlisted feedback trail, not meant to
+  // vanish when a rep is reassigned). Deleting a sentinel rep's auth user
+  // without clearing their suggestions first fails at the DB layer; GoTrue
+  // surfaces that as an opaque 500 rather than the real FK error.
+  await del('suggestions', 'suggestions', 'submitted_by_user_id', sentinelUserIds);
+
   let usersDeleted = 0;
-  for (const p of profs ?? []) {
-    const { error } = await db.auth.admin.deleteUser(p.id);
-    if (error) throw new Error(`deleteUser ${p.id}: ${error.message}`);
+  for (const id of sentinelUserIds) {
+    const { error: delErr } = await db.auth.admin.deleteUser(id);
+    if (delErr) throw new Error(`deleteUser ${id}: ${delErr.message}`);
     usersDeleted += 1;
   }
   counts.auth_users = usersDeleted;
