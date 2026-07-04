@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { GoogleMark } from '../../components/Icons';
+import { GOOGLE_AUTH_ENABLED } from '../../lib/config';
 
 export default function Login() {
   const { signIn, signInWithGoogle, startOtpLogin, verifyOtpLogin, otpEnabled, session } = useAuth();
@@ -102,10 +103,14 @@ export default function Login() {
           )
         )}
 
-        <div className="or-divider"><span>or</span></div>
-        <button type="button" className="google-btn" onClick={onGoogle}>
-          <GoogleMark /> Continue with Google
-        </button>
+        {GOOGLE_AUTH_ENABLED && (
+          <>
+            <div className="or-divider"><span>or</span></div>
+            <button type="button" className="google-btn" onClick={onGoogle}>
+              <GoogleMark /> Continue with Google
+            </button>
+          </>
+        )}
       </div>
 
       <p className="muted">New here? <Link to="/register">Create an account</Link></p>
