@@ -135,7 +135,8 @@ export default function AdminDashboard() {
             <p className="muted">For a resident who paid a rep directly without using the app — marks the flat as paid.</p>
             <OfflinePaymentForm
               towers={towers}
-              sadyaPrices={{ adult: event.adult_sadya_price, child: event.child_sadya_price }}
+              sadyaPrices={event.sadya_open ? { adult: event.adult_sadya_price, child: event.child_sadya_price } : undefined}
+              sadyaClosedNote={event.sadya_open ? undefined : "Sadya walk-ins aren't available until booking opens."}
               onRecorded={load}
             />
           </details>

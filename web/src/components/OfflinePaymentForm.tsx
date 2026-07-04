@@ -15,11 +15,14 @@ export default function OfflinePaymentForm({
   towerId,
   towers,
   sadyaPrices,
+  sadyaClosedNote,
   onRecorded,
 }: {
   towerId?: string;
   towers?: { id: string; name: string }[];
   sadyaPrices?: { adult: number; child: number };
+  /** Shown instead of the Sadya tab when sadyaPrices is omitted because booking isn't open. */
+  sadyaClosedNote?: string;
   onRecorded: () => void;
 }) {
   const [kind, setKind] = useState<Kind>('contribution');
@@ -84,6 +87,9 @@ export default function OfflinePaymentForm({
           <button type="button" className={isSadya ? '' : 'secondary'} style={{ flex: 1 }}
             onClick={() => { setKind('sadya'); setMsg(null); }}>Sadya</button>
         </div>
+      )}
+      {!sadyaPrices && sadyaClosedNote && (
+        <p className="muted" style={{ marginTop: 0 }}>{sadyaClosedNote}</p>
       )}
 
       {towers && (
