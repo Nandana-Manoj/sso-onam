@@ -142,38 +142,46 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
       )}
 
       {/* Pending payment → show rep + record payment */}
-      {contribution?.status === 'payment_pending' && (
-        <>
-          <p>
-            Pledged: <strong>{formatINR(contribution.amount)}</strong> — pay your tower rep, then submit below.
-          </p>
-          <label>Amount to Pay (₹)
-            <input
-              type="number"
-              min={0}
-              step="1"
-              value={amountPaid}
-              onChange={(e) => setAmountPaid(e.target.value)}
-            />
-          </label>
-
-          <RepPayBox
-            towerId={profile?.tower_id}
-            amount={Number(amountPaid) || contribution.amount}
-            note={`${event.name} contribution`}
-            qrKey={profile?.tower_id ?? undefined}
-          />
-          <form onSubmit={submitPayment}>
-            <label>
-              UTR / reference (optional)
-              <input value={utr} onChange={(e) => setUtr(e.target.value)} placeholder="UPI transaction ref" />
+      {contribution?.status === 'payment_pending' && (() => {
+        const payAmount = Number(amountPaid) || contribution.amount;
+        const belowMin = payAmount < event.min_contribution;
+        return (
+          <>
+            <p>
+              <strong>{formatINR(contribution.amount)}</strong> — pay your tower rep, then submit below.
+            </p>
+            <label>Amount to Pay (₹)
+              <input
+                type="number"
+                min={0}
+                step="1"
+                value={amountPaid}
+                onChange={(e) => setAmountPaid(e.target.value)}
+              />
             </label>
-            <button type="submit" disabled={busy}>
-              I've paid {formatINR(Number(amountPaid) || contribution.amount)} — submit for verification
-            </button>
-          </form>
-        </>
-      )}
+
+            {belowMin ? (
+              <p className="error">{belowMinMsg}</p>
+            ) : (
+              <RepPayBox
+                towerId={profile?.tower_id}
+                amount={payAmount}
+                note={`${event.name} contribution`}
+                qrKey={profile?.tower_id ?? undefined}
+              />
+            )}
+            <form onSubmit={submitPayment}>
+              <label>
+                UTR / reference (optional)
+                <input value={utr} onChange={(e) => setUtr(e.target.value)} placeholder="UPI transaction ref" />
+              </label>
+              <button type="submit" disabled={busy || belowMin}>
+                I've paid {formatINR(payAmount)} — submit for verification
+              </button>
+            </form>
+          </>
+        );
+      })()}
 
       {/* Submitted → awaiting rep */}
       {contribution?.status === 'submitted' && (

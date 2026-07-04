@@ -3,7 +3,6 @@ import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import RequestChangeModal from '../components/RequestChangeModal';
-import HelpContact from '../components/HelpContact';
 
 export default function Profile() {
   const { profile, updateName, signOut } = useAuth();
@@ -99,15 +98,6 @@ export default function Profile() {
       <div className="row">
         <button type="button" onClick={() => setShowPw(true)}>Change Password</button>
         <button type="button" onClick={() => signOut()}>Log Out</button>
-      </div>
-
-      {/* Help / support contact */}
-      <div className="card card-accent help-card">
-        <h3>Need Help?</h3>
-        <p className="muted" style={{ marginTop: 0 }}>
-          Facing an issue or have a question about the app? Reach out and we'll help you out.
-        </p>
-        <HelpContact />
       </div>
 
       {showPw && <ChangePasswordModal onClose={() => setShowPw(false)} />}
