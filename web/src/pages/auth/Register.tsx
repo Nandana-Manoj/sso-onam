@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { GoogleMark } from '../../components/Icons';
 import { toE164 } from '../../lib/format';
 import { byName } from '../../lib/ui';
+import { GOOGLE_AUTH_ENABLED } from '../../lib/config';
 import {
   firebaseEnabled,
   sendPhoneOtp,
@@ -129,23 +130,27 @@ export default function Register() {
         <button type="submit" disabled={busy}>
           {busy ? 'Please wait…' : phoneVerify ? 'Send Verification Code' : 'Create Account'}
         </button>
-        <div className="or-divider"><span>or</span></div>
-        <button
-          type="button"
-          className="google-btn"
-          onClick={async () => {
-            setErr(null);
-            try { await signInWithGoogle(); }
-            catch (e) {
-              const m = (e as Error).message;
-              setErr(m.includes('provider is not enabled')
-                ? 'Google sign-in isn’t available right now. Please use mobile & password.'
-                : m);
-            }
-          }}
-        >
-          <GoogleMark /> Continue with Google
-        </button>
+        {GOOGLE_AUTH_ENABLED && (
+          <>
+            <div className="or-divider"><span>or</span></div>
+            <button
+              type="button"
+              className="google-btn"
+              onClick={async () => {
+                setErr(null);
+                try { await signInWithGoogle(); }
+                catch (e) {
+                  const m = (e as Error).message;
+                  setErr(m.includes('provider is not enabled')
+                    ? 'Google sign-in isn’t available right now. Please use mobile & password.'
+                    : m);
+                }
+              }}
+            >
+              <GoogleMark /> Continue with Google
+            </button>
+          </>
+        )}
       </form>
       <p className="muted">Already have an account? <Link to="/login">Log in</Link></p>
     </div>
