@@ -92,6 +92,7 @@ export default function Register() {
       <div className="auth-page">
         <h1>Verify Your Number</h1>
         <p className="muted">We sent a code to {form.mobile}.</p>
+        <p className="muted">Didn't get it? Check your spam or blocked messages folder.</p>
         <form onSubmit={onVerify} className="card">
           <label>Enter Code
             <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" required />
