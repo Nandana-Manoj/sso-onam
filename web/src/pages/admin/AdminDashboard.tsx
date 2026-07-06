@@ -65,6 +65,7 @@ export default function AdminDashboard() {
   const [refunding, setRefunding] = useState<OverviewContrib | null>(null);
   const [refundReason, setRefundReason] = useState('');
   const [refundBusy, setRefundBusy] = useState(false);
+  const [refundSearch, setRefundSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -131,6 +132,10 @@ export default function AdminDashboard() {
   const towerName = (id: string) => towers.find((t) => t.id === id)?.name ?? '—';
   const flatNumber = (id: string) => flats.find((f) => f.id === id)?.flat_number ?? '—';
   const refundable = contribs.filter((c) => c.status === 'verified' && !c.refund_state);
+  const refundQuery = refundSearch.trim().toLowerCase();
+  const refundMatches = refundQuery
+    ? refundable.filter((c) => flatNumber(c.flat_id).toLowerCase().includes(refundQuery))
+    : [];
 
   return (
     <div className="page">
@@ -172,29 +177,43 @@ export default function AdminDashboard() {
             {refundable.length === 0 ? (
               <p className="muted">No verified contributions eligible for a refund.</p>
             ) : (
-              <ul className="list" style={{ marginTop: '0.6rem' }}>
-                {refundable.map((c) => (
-                  <li key={c.id} className="card">
-                    <div className="between" style={{ alignItems: 'center' }}>
-                      <div>
-                        <strong>Flat {flatNumber(c.flat_id)}</strong>
-                        <div className="muted" style={{ fontSize: '0.85rem' }}>{towerName(c.paid_to_tower_id)}</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 700 }}>{formatINR(c.amount_paid ?? c.amount)}</div>
-                        <button
-                          type="button"
-                          className="danger-btn"
-                          style={{ marginTop: '0.3rem' }}
-                          onClick={() => { setRefunding(c); setRefundReason(''); }}
-                        >
-                          Refund
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <input
+                  value={refundSearch}
+                  onChange={(e) => setRefundSearch(e.target.value)}
+                  placeholder="Search by flat number…"
+                  style={{ marginTop: '0.6rem' }}
+                />
+                {refundQuery && (
+                  refundMatches.length === 0 ? (
+                    <p className="muted" style={{ marginTop: '0.6rem' }}>No matching flat with a refundable contribution.</p>
+                  ) : (
+                    <ul className="list" style={{ marginTop: '0.6rem' }}>
+                      {refundMatches.map((c) => (
+                        <li key={c.id} className="card">
+                          <div className="between" style={{ alignItems: 'center' }}>
+                            <div>
+                              <strong>Flat {flatNumber(c.flat_id)}</strong>
+                              <div className="muted" style={{ fontSize: '0.85rem' }}>{towerName(c.paid_to_tower_id)}</div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontWeight: 700 }}>{formatINR(c.amount_paid ?? c.amount)}</div>
+                              <button
+                                type="button"
+                                className="danger-btn"
+                                style={{ marginTop: '0.3rem' }}
+                                onClick={() => { setRefunding(c); setRefundReason(''); }}
+                              >
+                                Refund
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )
+                )}
+              </>
             )}
           </details>
         </>
