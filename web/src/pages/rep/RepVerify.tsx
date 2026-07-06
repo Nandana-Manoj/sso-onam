@@ -7,7 +7,8 @@ import CorrectionRequestsPanel from '../../components/CorrectionRequestsPanel';
 import { useRepData, type ContribRow, type SadyaRow, type SadyaCancelRow } from './useRepData';
 
 /** All the rep's approval work in one focused place: contribution payments,
- *  refund requests, sadya bookings, sadya cancellations and change requests. */
+ *  sadya bookings, sadya cancellations and change requests. Contribution
+ *  refunds are admin-only now (see AdminDashboard). */
 export default function RepVerify() {
   const { loading, towers, contribs, sadya, sadyaCancels, reload } = useRepData();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -102,15 +103,6 @@ export default function RepVerify() {
     reload();
   }
 
-  async function processRefund(row: ContribRow, appr: boolean) {
-    setError(null);
-    setBusyId(row.id);
-    const { error: e } = await supabase.rpc('process_refund', {
-      p_contribution_id: row.id, p_approve: appr, p_reason: null,
-    });
-    setBusyId(null);
-    if (e) setError(e.message); else reload();
-  }
   async function processSadyaCancel(row: SadyaCancelRow, appr: boolean) {
     setError(null);
     setBusyId(row.id);
@@ -122,7 +114,6 @@ export default function RepVerify() {
   }
 
   const queue = contribs.filter((c) => c.status === 'submitted');
-  const refundQueue = contribs.filter((c) => c.refund_state === 'requested');
   const sadyaQueue = sadya.filter((s) => s.status === 'submitted');
   const sadyaCancelQueue = sadyaCancels.filter((s) => s.status === 'requested');
   const sadyaPeople = (s: { num_adults: number; num_children: number }) =>
@@ -206,39 +197,6 @@ export default function RepVerify() {
         </>
       )}
       {error && <p className="error">{error}</p>}
-
-      {/* ── Refund Requests ────────────────────────────────────────────── */}
-      {refundQueue.length > 0 && (
-        <>
-          <div className="section-title"><h3>Refund Requests</h3>
-            <span className="badge rejected">{refundQueue.length}</span>
-          </div>
-          <ul className="list">
-            {refundQueue.map((row) => (
-              <li key={row.id} className="card card-accent">
-                <div className="between" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
-                  <div>
-                    <strong style={{ fontSize: '1.05rem' }}>Flat {row.flats?.flat_number ?? '—'}</strong>
-                    <div className="muted" style={{ marginTop: '0.2rem', fontSize: '0.85rem' }}>
-                      {towerName(row.paid_to_tower_id)}{row.resident?.name ? ` · ${row.resident.name}` : ''}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{formatINR(row.amount_paid ?? row.amount)}</div>
-                    <div className="muted" style={{ fontSize: '0.75rem' }}>refund due</div>
-                  </div>
-                </div>
-                {row.refund_reason && <p className="muted" style={{ margin: '0.7rem 0 0' }}>Reason: {row.refund_reason}</p>}
-                <p className="muted" style={{ margin: '0.5rem 0 0.7rem' }}>Pay the resident back, then mark it refunded.</p>
-                <div className="row">
-                  <button className="success-btn" disabled={busyId === row.id} onClick={() => processRefund(row, true)}>Mark Refunded</button>
-                  <button className="danger-btn" disabled={busyId === row.id} onClick={() => processRefund(row, false)}>Decline</button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
 
       {/* ── Sadya Verification Queue ───────────────────────────────────── */}
       <div className="section-title">

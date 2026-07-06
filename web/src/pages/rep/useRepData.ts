@@ -168,11 +168,10 @@ export function useRepData(): RepData {
 /** Total pending items awaiting the rep across all queues — drives the hub badge. */
 export function pendingCounts(d: RepData) {
   const contribQueue = d.contribs.filter((c) => c.status === 'submitted').length;
-  const refundQueue = d.contribs.filter((c) => c.refund_state === 'requested').length;
   const sadyaQueue = d.sadya.filter((s) => s.status === 'submitted').length;
   const sadyaCancelQueue = d.sadyaCancels.filter((s) => s.status === 'requested').length;
   return {
-    contribQueue, refundQueue, sadyaQueue, sadyaCancelQueue,
-    total: contribQueue + refundQueue + sadyaQueue + sadyaCancelQueue,
+    contribQueue, sadyaQueue, sadyaCancelQueue,
+    total: contribQueue + sadyaQueue + sadyaCancelQueue,
   };
 }

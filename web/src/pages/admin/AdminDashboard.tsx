@@ -4,6 +4,8 @@ import { supabase } from '../../lib/supabase';
 import OfflinePaymentForm from '../../components/OfflinePaymentForm';
 import RevenueDashboard from '../../components/RevenueDashboard';
 import SadyaScanOverview from '../../components/SadyaScanOverview';
+import Modal from '../../components/Modal';
+import { formatINR } from '../../lib/format';
 import {
   type OverviewContrib, type OverviewFlat, type OverviewTower,
 } from '../../components/ContributionOverview';
@@ -60,6 +62,10 @@ export default function AdminDashboard() {
   const [cancellations, setCancellations] = useState<OverviewCancellation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refunding, setRefunding] = useState<OverviewContrib | null>(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundBusy, setRefundBusy] = useState(false);
+  const [refundSearch, setRefundSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,6 +116,27 @@ export default function AdminDashboard() {
 
   useEffect(() => { load(); }, [load]);
 
+  async function confirmRefund() {
+    if (!refunding) return;
+    setRefundBusy(true);
+    const { error: e } = await supabase.rpc('admin_refund_contribution', {
+      p_contribution_id: refunding.id,
+      p_reason: refundReason.trim() || null,
+    });
+    setRefundBusy(false);
+    setRefunding(null);
+    setRefundReason('');
+    if (e) setError(e.message); else load();
+  }
+
+  const towerName = (id: string) => towers.find((t) => t.id === id)?.name ?? '—';
+  const flatNumber = (id: string) => flats.find((f) => f.id === id)?.flat_number ?? '—';
+  const refundable = contribs.filter((c) => c.status === 'verified' && !c.refund_state);
+  const refundQuery = refundSearch.trim().toLowerCase();
+  const refundMatches = refundQuery
+    ? refundable.filter((c) => flatNumber(c.flat_id).toLowerCase().includes(refundQuery))
+    : [];
+
   return (
     <div className="page">
       <p className="page-back"><Link to="/admin">← Admin</Link></p>
@@ -140,9 +167,80 @@ export default function AdminDashboard() {
               onRecorded={load}
             />
           </details>
+
+          <details className="disclosure card card-accent">
+            <summary>Refund a Contribution</summary>
+            <p className="muted">
+              Residents can't cancel or request a refund themselves — only an admin can refund a verified
+              contribution here. This frees the flat to contribute again.
+            </p>
+            {refundable.length === 0 ? (
+              <p className="muted">No verified contributions eligible for a refund.</p>
+            ) : (
+              <>
+                <input
+                  value={refundSearch}
+                  onChange={(e) => setRefundSearch(e.target.value)}
+                  placeholder="Search by flat number…"
+                  style={{ marginTop: '0.6rem' }}
+                />
+                {refundQuery && (
+                  refundMatches.length === 0 ? (
+                    <p className="muted" style={{ marginTop: '0.6rem' }}>No matching flat with a refundable contribution.</p>
+                  ) : (
+                    <ul className="list" style={{ marginTop: '0.6rem' }}>
+                      {refundMatches.map((c) => (
+                        <li key={c.id} className="card">
+                          <div className="between" style={{ alignItems: 'center' }}>
+                            <div>
+                              <strong>Flat {flatNumber(c.flat_id)}</strong>
+                              <div className="muted" style={{ fontSize: '0.85rem' }}>{towerName(c.paid_to_tower_id)}</div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontWeight: 700 }}>{formatINR(c.amount_paid ?? c.amount)}</div>
+                              <button
+                                type="button"
+                                className="danger-btn"
+                                style={{ marginTop: '0.3rem' }}
+                                onClick={() => { setRefunding(c); setRefundReason(''); }}
+                              >
+                                Refund
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )
+                )}
+              </>
+            )}
+          </details>
         </>
       )}
       {error && <p className="error">{error}</p>}
+
+      {refunding && (
+        <Modal title="Refund This Contribution?" onClose={() => setRefunding(null)}>
+          <p className="muted">
+            Flat {flatNumber(refunding.flat_id)} · {towerName(refunding.paid_to_tower_id)} ·{' '}
+            {formatINR(refunding.amount_paid ?? refunding.amount)}
+          </p>
+          <p className="muted">This frees the flat to contribute again. Make sure the resident has been paid back.</p>
+          <label>Reason (optional)
+            <input
+              autoFocus
+              value={refundReason}
+              onChange={(e) => setRefundReason(e.target.value)}
+              placeholder="e.g. paid twice by mistake"
+            />
+          </label>
+          <div className="row">
+            <button className="danger-btn" disabled={refundBusy} onClick={confirmRefund}>Refund</button>
+            <button className="secondary" onClick={() => setRefunding(null)}>Cancel</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
