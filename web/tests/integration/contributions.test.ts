@@ -93,8 +93,8 @@ describe('verify_contribution — reject path', () => {
   });
 });
 
-describe('refund flow', () => {
-  it('the resident who requested a refund can see refund_state = requested', async () => {
+describe('refund flow — admin only', () => {
+  it('the resident whose contribution has a refund requested can see refund_state = requested', async () => {
     const resident = await signInAs(world.users.residentA[5]);
     const { data, error } = await resident
       .from('contributions')
@@ -105,9 +105,19 @@ describe('refund flow', () => {
     expect((data as { refund_state: string }).refund_state).toBe('requested');
   });
 
-  it('a rep can process (approve) a refund request for their own tower', async () => {
+  it('a rep cannot process a refund request — refunds are admin-only', async () => {
     const rep = await signInAs(world.users.repMultiMobile);
-    const { data, error } = await rep.rpc('process_refund', {
+    const { error } = await rep.rpc('process_refund', {
+      p_contribution_id: world.contributionIds.refundRequested,
+      p_approve: true,
+      p_reason: 'should not be allowed',
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('an admin can process (approve) a refund request', async () => {
+    const admin = await signInAs(world.users.adminMobile);
+    const { data, error } = await admin.rpc('process_refund', {
       p_contribution_id: world.contributionIds.refundRequested,
       p_approve: true,
       p_reason: 'Integration test refund',
@@ -123,21 +133,31 @@ describe('refund flow', () => {
     expect((data as { status: string }).status).toBe('payment_pending');
   });
 
-  it('a rep of a different tower cannot process a refund for a tower they do not manage', async () => {
-    // Fresh verified+refund-requested row on tower A, attacked from repC (tower C only).
+  it('a resident cannot self-refund a verified contribution', async () => {
     const resident = await signInAs(world.users.residentA[3]);
-    const { error: reqErr } = await resident.rpc('request_refund', {
+    const { error } = await resident.rpc('admin_refund_contribution', {
       p_contribution_id: world.contributionIds.verified,
-      p_reason: 'integration test',
-    });
-    expect(reqErr).toBeNull();
-
-    const repC = await signInAs(world.users.repCMobile);
-    const { error } = await repC.rpc('process_refund', {
-      p_contribution_id: world.contributionIds.verified,
-      p_approve: true,
       p_reason: 'should not be allowed',
     });
     expect(error).not.toBeNull();
+  });
+
+  it('a tower rep cannot refund a contribution either', async () => {
+    const rep = await signInAs(world.users.repMultiMobile);
+    const { error } = await rep.rpc('admin_refund_contribution', {
+      p_contribution_id: world.contributionIds.verified,
+      p_reason: 'should not be allowed',
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('an admin can refund a verified contribution directly, in one step', async () => {
+    const admin = await signInAs(world.users.adminMobile);
+    const { data, error } = await admin.rpc('admin_refund_contribution', {
+      p_contribution_id: world.contributionIds.verified,
+      p_reason: 'Integration test direct refund',
+    });
+    expect(error).toBeNull();
+    expect((data as { refund_state: string }).refund_state).toBe('refunded');
   });
 });

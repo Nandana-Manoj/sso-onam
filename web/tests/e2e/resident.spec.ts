@@ -23,11 +23,11 @@ test.describe('Resident — contribution', () => {
     await expect(page.getByText(/awaiting verification/i)).toBeVisible();
   });
 
-  test('a resident whose contribution is already verified sees a confirmation and can request a refund', async ({ page }) => {
+  test('a resident whose contribution is already verified sees a confirmation and no self-service refund option', async ({ page }) => {
     const world = loadWorld();
     await loginAs(page, world.users.residentA[3]); // flat 103, seeded verified
     await expect(page.getByText(/thank you/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /cancel.*request refund/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /cancel.*request refund/i })).toHaveCount(0);
   });
 
   test('a resident whose contribution was rejected sees the reason and can start a new one', async ({ page }) => {
