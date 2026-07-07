@@ -19,9 +19,9 @@ export default function SadyaPanel({ event }: { event: EventConfig }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // new-booking form
+  // new-booking form (adults only — kids no longer get a separate sadya pass)
   const [adults, setAdults] = useState(1);
-  const [children, setChildren] = useState(0);
+  const children = 0;
 
   // cancel-tickets-for-a-refund flow
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -73,15 +73,15 @@ export default function SadyaPanel({ event }: { event: EventConfig }) {
   async function createBooking(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (adults + children < 1) { setError('Add at least one person.'); return; }
+    if (adults < 1) { setError('Add at least one person.'); return; }
     setBusy(true);
     const { error: e1 } = await supabase.rpc('create_sadya_booking', {
       p_num_adults: adults,
-      p_num_children: children,
+      p_num_children: 0,
     });
     setBusy(false);
     if (e1) setError(e1.message);
-    else { setAdults(1); setChildren(0); load(); }
+    else { setAdults(1); load(); }
   }
 
   async function submitPayment(booking: SadyaBooking, utr: string) {
@@ -158,11 +158,8 @@ export default function SadyaPanel({ event }: { event: EventConfig }) {
     <div className="card">
       <h3>Book Sadya 🍛</h3>
       <p className="muted">
-        {formatINR(event.adult_sadya_price)} per adult
-        {event.child_sadya_price > 0
-          ? ` · ${formatINR(event.child_sadya_price)} per child (under 5)`
-          : ' · children under 5 free'}
-        . You can make more than one booking (e.g. for guests) — they all share one flat pass.
+        {formatINR(event.adult_sadya_price)} per adult. You can make more than one booking (e.g. for
+        guests) — they all share one flat pass.
       </p>
 
       {/* The flat's single QR — stays at the top so new bookings don't push it down. */}
@@ -240,18 +237,13 @@ export default function SadyaPanel({ event }: { event: EventConfig }) {
       <details className="disclosure" style={{ marginTop: '0.6rem' }} open={inProgress.length === 0}>
         <summary>New Sadya Booking</summary>
         <form onSubmit={createBooking} style={{ marginTop: '0.6rem' }}>
-          <div className="grid cols-2">
-            <label>Adults
-              <Stepper value={adults} onChange={setAdults} min={0} />
-            </label>
-            <label>Children (under 5)
-              <Stepper value={children} onChange={setChildren} min={0} />
-            </label>
-          </div>
+          <label>Adults
+            <Stepper value={adults} onChange={setAdults} min={0} />
+          </label>
           <p style={{ margin: '0.4rem 0' }}>
-            Total: <strong>{formatINR(newTotal)}</strong> for {adults + children} {adults + children === 1 ? 'person' : 'people'}
+            Total: <strong>{formatINR(newTotal)}</strong> for {adults} {adults === 1 ? 'person' : 'people'}
           </p>
-          <button type="submit" disabled={busy || adults + children < 1}>Create Booking</button>
+          <button type="submit" disabled={busy || adults < 1}>Create Booking</button>
         </form>
       </details>
 

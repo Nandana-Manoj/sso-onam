@@ -30,17 +30,16 @@ export default function OfflinePaymentForm({
   const [flat, setFlat] = useState('');
   const [amount, setAmount] = useState('');
   const [adults, setAdults] = useState(1);
-  const [children, setChildren] = useState(0);
   const [utr, setUtr] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const tower = towerId ?? selTower;
-  const sadyaTotal = sadyaPrices ? adults * sadyaPrices.adult + children * sadyaPrices.child : 0;
+  const sadyaTotal = sadyaPrices ? adults * sadyaPrices.adult : 0;
 
   function reset() {
-    setFlat(''); setAmount(''); setAdults(1); setChildren(0); setUtr(''); setNote('');
+    setFlat(''); setAmount(''); setAdults(1); setUtr(''); setNote('');
   }
 
   async function submit(e: FormEvent) {
@@ -52,7 +51,7 @@ export default function OfflinePaymentForm({
           p_tower_id: tower,
           p_flat_number: flat.trim(),
           p_num_adults: adults,
-          p_num_children: children,
+          p_num_children: 0,
           p_utr: utr.trim() || null,
           p_note: note.trim() || null,
         })
@@ -67,7 +66,7 @@ export default function OfflinePaymentForm({
     if (error) setMsg(error.message);
     else {
       setMsg(kind === 'sadya'
-        ? `Recorded ✓ Sadya for Flat ${flat.trim()} confirmed (${adults + children} ${adults + children === 1 ? 'pass' : 'passes'}).`
+        ? `Recorded ✓ Sadya for Flat ${flat.trim()} confirmed (${adults} ${adults === 1 ? 'pass' : 'passes'}).`
         : `Recorded ✓ Flat ${flat.trim()} marked as paid.`);
       reset();
       onRecorded();
@@ -76,7 +75,7 @@ export default function OfflinePaymentForm({
 
   const isSadya = kind === 'sadya';
   const disableSubmit = busy || !tower || !flat.trim()
-    || (isSadya ? adults + children < 1 : !(Number(amount) > 0));
+    || (isSadya ? adults < 1 : !(Number(amount) > 0));
 
   return (
     <form onSubmit={submit}>
@@ -104,12 +103,9 @@ export default function OfflinePaymentForm({
       {isSadya ? (
         <>
           <label>Flat Number<input value={flat} onChange={(e) => setFlat(e.target.value)} required /></label>
-          <div className="grid cols-2">
-            <label>Adults<Stepper value={adults} onChange={setAdults} min={0} /></label>
-            <label>Children (under 5)<Stepper value={children} onChange={setChildren} min={0} /></label>
-          </div>
+          <label>Adults<Stepper value={adults} onChange={setAdults} min={0} /></label>
           <p style={{ margin: '0.4rem 0' }}>
-            Total: <strong>{formatINR(sadyaTotal)}</strong> for {adults + children} {adults + children === 1 ? 'pass' : 'passes'}
+            Total: <strong>{formatINR(sadyaTotal)}</strong> for {adults} {adults === 1 ? 'pass' : 'passes'}
           </p>
         </>
       ) : (
