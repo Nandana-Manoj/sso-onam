@@ -1,6 +1,9 @@
 # Release v1.7.0
 
-**Tag:** `v1.7.0`  ·  **Merge commit on `main`:** `7ae99b4`  ·  **Date:** `2026-07-08`
+**Tag:** `v1.7.0`  ·  **Merge commit on `main`:** `66d6a01`  ·  **Date:** `2026-07-08`
+
+> Tag was moved from the original merge commit `7ae99b4` to `66d6a01` to fold
+> in the addendum below as part of this same release (no new version cut).
 
 Semver bump: `[ ] PATCH (fix)  [x] MINOR (feature)  [ ] MAJOR (breaking/data-model)`
 
@@ -26,6 +29,11 @@ Semver bump: `[ ] PATCH (fix)  [x] MINOR (feature)  [ ] MAJOR (breaking/data-mod
 - DB: fixed `set_my_rep_payment` throwing "query returned more than one row"
   for any tower rep managing more than one tower (the multi-tower rep model
   was never propagated into this function).
+
+### Addendum (`66d6a01`, same day)
+- Simplified the "Flats Paid" stat tile on the Admin/Rep dashboard to show
+  just the count (e.g. `1`) instead of `1/4` — the donut directly above it
+  already shows the proportion, so the fraction was redundant.
 
 ## Migrations to apply to PROD
 - [x] `supabase/migrations/20260708090000_phase3_09_fix_multitower_rep_payment.sql`
@@ -62,15 +70,15 @@ schema change (function replace only, no columns/tables touched).
 
 ## Deploy steps
 1. [x] Applied the migration above to **prod** (before merging).
-2. [x] `staging` merged into `main` (`7ae99b4`) → Vercel auto-deploys prod.
-3. [x] Tagged `v1.7.0` on the merge commit.
-4. [ ] **GitHub Release not created** — `gh` CLI isn't installed in this
-       environment. Paste this file's contents into a new release at the
-       repo's Releases page, target tag `v1.7.0`.
+2. [x] `staging` merged into `main` (`7ae99b4`, then `66d6a01` for the
+       addendum) → Vercel auto-deploys prod on each push.
+3. [x] Tagged `v1.7.0` on the merge commit (moved to `66d6a01` for the
+       addendum, per the note under the title).
+4. [x] GitHub Release published at `v1.7.0` (updated for the addendum).
 5. [ ] Smoke-test prod once the Vercel deploy finishes: check a dashboard
        table on a phone (no more overflow/misalignment), confirm the sadya
-       booking form is adults-only, and spot-check the QR save on a real
-       device if convenient.
+       booking form is adults-only, confirm "Flats Paid" shows just the
+       count, and spot-check the QR save on a real device if convenient.
 
 ## Rollback (if needed)
 - **Frontend:** in the prod Vercel project, Promote-to-Production the
