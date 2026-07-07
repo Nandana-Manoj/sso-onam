@@ -182,34 +182,36 @@ function LedgerTable({
   );
 
   const renderTable = (visible: typeof rows) => (
-    <table className="tbl">
-      <thead>
-        <tr>
-          <th>Flat</th>
-          {multiTower && <th>Tower</th>}
-          <th>Status</th>
-          <th>Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        {visible.map((r) => (
-          <tr key={r.id}>
-            <td>{r.flat}</td>
-            {multiTower && <td>{towerName(r.towerId)}</td>}
-            <td><span className={`badge soft ${r.st}`}>{STATE_LABEL[r.st]}</span></td>
-            <td>{r.amt ? formatINR(r.amt) : '—'}</td>
+    <div className="tbl-wrap">
+      <table className="tbl">
+        <thead>
+          <tr>
+            <th>Flat</th>
+            {multiTower && <th>Tower</th>}
+            <th>Status</th>
+            <th>Amount</th>
           </tr>
-        ))}
-      </tbody>
-      <tfoot>
-        <tr>
-          <th>Total Collected</th>
-          {multiTower && <th />}
-          <th />
-          <th>{formatINR(collectedTotal)}</th>
-        </tr>
-      </tfoot>
-    </table>
+        </thead>
+        <tbody>
+          {visible.map((r) => (
+            <tr key={r.id}>
+              <td>{r.flat}</td>
+              {multiTower && <td>{towerName(r.towerId)}</td>}
+              <td><span className={`badge soft ${r.st}`}>{STATE_LABEL[r.st]}</span></td>
+              <td>{r.amt ? formatINR(r.amt) : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th>Total Collected</th>
+            {multiTower && <th />}
+            <th />
+            <th>{formatINR(collectedTotal)}</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   );
 
   const emptyMsg = (

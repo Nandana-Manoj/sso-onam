@@ -121,7 +121,7 @@ function CombinedOverview({
     rows.push(['Total', '', '', grandTotal]);
     downloadCsv(
       `onam-combined-${stamp}.csv`,
-      ['Tower', 'Families Contributed', 'Sadya Passes Sold', 'Total (Rs.)'],
+      ['Tower', 'Families Contributed', 'Sadya No. of Leaves Sold', 'Total (Rs.)'],
       rows,
     );
   }
@@ -161,34 +161,36 @@ function CombinedOverview({
             <h3>Per-Tower Breakdown</h3>
             <button className="secondary" disabled={towers.length === 0} onClick={exportCsv}>Download CSV</button>
           </div>
-          <table className="tbl">
-            <thead>
-              <tr><th>Tower</th><th>Contributing Families</th><th>Sadya Passes</th><th>Total</th></tr>
-            </thead>
-            <tbody>
-              {towers.map((t) => {
-                const families = familiesByTower.get(t.id)?.size ?? 0;
-                const passes = Math.max(0, sadyaPassesByTower.get(t.id) ?? 0);
-                const total = towerTotal(t.id);
-                return (
-                  <tr key={t.id}>
-                    <td>{t.name}</td>
-                    <td>{families || '—'}</td>
-                    <td>{passes || '—'}</td>
-                    <td>{total ? formatINR(total) : '—'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr>
-                <th>Total</th>
-                <th />
-                <th />
-                <th>{formatINR(grandTotal)}</th>
-              </tr>
-            </tfoot>
-          </table>
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr><th>Tower</th><th>Contributing Families</th><th>No. of Leaves</th><th>Total</th></tr>
+              </thead>
+              <tbody>
+                {towers.map((t) => {
+                  const families = familiesByTower.get(t.id)?.size ?? 0;
+                  const passes = Math.max(0, sadyaPassesByTower.get(t.id) ?? 0);
+                  const total = towerTotal(t.id);
+                  return (
+                    <tr key={t.id}>
+                      <td>{t.name}</td>
+                      <td>{families || '—'}</td>
+                      <td>{passes || '—'}</td>
+                      <td>{total ? formatINR(total) : '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th>Total</th>
+                  <th />
+                  <th />
+                  <th>{formatINR(grandTotal)}</th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
       )}
     </>

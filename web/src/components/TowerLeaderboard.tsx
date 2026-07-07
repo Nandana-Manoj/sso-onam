@@ -38,28 +38,30 @@ export default function TowerLeaderboard({ eventId }: { eventId: string }) {
       <p className="muted" style={{ marginTop: 0, marginBottom: '0.6rem' }}>
         How every tower is doing this Onam.
       </p>
-      <table className="tbl">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Tower</th>
-            <th>Contributing Families</th>
-            <th>Sadya Passes</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={r.tower_id}>
-              <td className="muted">{i + 1}</td>
-              <td>{r.tower_name}</td>
-              <td>{r.families || '—'}</td>
-              <td>{r.sadya_passes || '—'}</td>
-              <td>{r.total_amount ? formatINR(r.total_amount) : '—'}</td>
+      <div className="tbl-wrap">
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tower</th>
+              <th>Contributing Families</th>
+              <th>No. of Leaves</th>
+              <th>Total</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.tower_id}>
+                <td className="muted">{i + 1}</td>
+                <td>{r.tower_name}</td>
+                <td>{r.families || '—'}</td>
+                <td>{r.sadya_passes || '—'}</td>
+                <td>{r.total_amount ? formatINR(r.total_amount) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

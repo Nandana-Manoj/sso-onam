@@ -443,20 +443,22 @@ function RosterModal({ event, onClose }: { event: EventConfig; onClose: () => vo
           )}
 
           <h3 style={{ marginTop: '1rem' }}>Tower Reps &amp; Collections</h3>
-          <table className="tbl">
-            <thead>
-              <tr><th>Tower</th><th>Rep</th><th>Collected</th></tr>
-            </thead>
-            <tbody>
-              {towers.map((t) => (
-                <tr key={t.tower_id}>
-                  <td>{t.name}</td>
-                  <td>{t.rep_name ?? <span className="muted">No rep</span>}{t.rep_mobile ? <span className="muted"> · {t.rep_mobile}</span> : ''}</td>
-                  <td>{t.collected_verified ? formatINR(t.collected_verified) : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr><th>Tower</th><th>Rep</th><th>Collected</th></tr>
+              </thead>
+              <tbody>
+                {towers.map((t) => (
+                  <tr key={t.tower_id}>
+                    <td>{t.name}</td>
+                    <td>{t.rep_name ?? <span className="muted">No rep</span>}{t.rep_mobile ? <span className="muted"> · {t.rep_mobile}</span> : ''}</td>
+                    <td>{t.collected_verified ? formatINR(t.collected_verified) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="muted" style={{ marginTop: '0.6rem', fontSize: '0.8rem' }}>
             {event.closed_at
               ? `Snapshot taken when the event was closed on ${new Date(event.closed_at).toLocaleDateString()}.`
