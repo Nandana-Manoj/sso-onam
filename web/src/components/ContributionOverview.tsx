@@ -79,7 +79,7 @@ export default function ContributionOverview({
           <div className="stat-label">Awaiting Verification</div>
         </div>
         <div className="stat amber">
-          <div className="stat-value">{flatsPaid.size}/{flats.length}</div>
+          <div className="stat-value">{flatsPaid.size}</div>
           <div className="stat-label">Flats Paid</div>
         </div>
         {(refundedTotal > 0 || counts.refunded > 0) && (
