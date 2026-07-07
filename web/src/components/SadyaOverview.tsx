@@ -116,7 +116,7 @@ export default function SadyaOverview({
             { value: cancelledPasses, color: '#b91c1c', label: 'Refunded' },
           ]}
           centerLabel={String(mealsConfirmed + awaitingPasses + cancelledPasses)}
-          centerSub="Passes"
+          centerSub="No. of Leaves"
         />
       </div>
 
@@ -203,7 +203,7 @@ function SadyaLedgerTable({
     const stamp = new Date().toISOString().slice(0, 10);
     downloadCsv(
       `onam-sadya-${stamp}.csv`,
-      ['Tower', 'Flat', 'Bookings', 'Confirmed Passes', 'Awaiting Passes', 'Collected (Rs.)', 'Refunded (Rs.)'],
+      ['Tower', 'Flat', 'Bookings', 'Confirmed No. of Leaves', 'Awaiting No. of Leaves', 'Collected (Rs.)', 'Refunded (Rs.)'],
       rows.map((r) => [towerName(r.towerId), r.flat, r.bookings, r.confirmedPasses, r.awaitingPasses, r.collected, r.refunded]),
     );
   }
@@ -218,37 +218,39 @@ function SadyaLedgerTable({
   ) : null;
 
   const renderTable = (visible: FlatRow[]) => (
-    <table className="tbl">
-      <thead>
-        <tr>
-          <th>Flat</th>
-          {multiTower && <th>Tower</th>}
-          <th>Bookings</th>
-          <th>Passes</th>
-          <th>Collected</th>
-        </tr>
-      </thead>
-      <tbody>
-        {visible.map((r) => (
-          <tr key={r.key}>
-            <td>{r.flat}</td>
-            {multiTower && <td>{towerName(r.towerId)}</td>}
-            <td>{r.bookings}</td>
-            <td>{r.confirmedPasses}{r.awaitingPasses ? ` (+${r.awaitingPasses})` : ''}</td>
-            <td>{r.collected ? formatINR(r.collected) : '—'}</td>
+    <div className="tbl-wrap">
+      <table className="tbl">
+        <thead>
+          <tr>
+            <th>Flat</th>
+            {multiTower && <th>Tower</th>}
+            <th>Bookings</th>
+            <th>No. of Leaves</th>
+            <th>Collected</th>
           </tr>
-        ))}
-      </tbody>
-      <tfoot>
-        <tr>
-          <th>Total Collected</th>
-          {multiTower && <th />}
-          <th />
-          <th />
-          <th>{formatINR(collectedTotal)}</th>
-        </tr>
-      </tfoot>
-    </table>
+        </thead>
+        <tbody>
+          {visible.map((r) => (
+            <tr key={r.key}>
+              <td>{r.flat}</td>
+              {multiTower && <td>{towerName(r.towerId)}</td>}
+              <td>{r.bookings}</td>
+              <td>{r.confirmedPasses}{r.awaitingPasses ? ` (+${r.awaitingPasses})` : ''}</td>
+              <td>{r.collected ? formatINR(r.collected) : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th>Total Collected</th>
+            {multiTower && <th />}
+            <th />
+            <th />
+            <th>{formatINR(collectedTotal)}</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   );
 
   const emptyMsg = (
@@ -263,7 +265,7 @@ function SadyaLedgerTable({
         <button className="secondary" disabled={rows.length === 0} onClick={exportCsv}>Download CSV</button>
       </div>
       <p className="muted" style={{ marginTop: 0, fontSize: '0.8rem' }}>
-        Passes = confirmed meals on the flat's QR; a <code>(+n)</code> shows passes still awaiting verification.
+        No. of Leaves = confirmed meals on the flat's QR; a <code>(+n)</code> shows leaves still awaiting verification.
       </p>
       {filters}
       {rows.length === 0 ? emptyMsg : renderTable(rows.slice(0, ROWS_PREVIEW))}

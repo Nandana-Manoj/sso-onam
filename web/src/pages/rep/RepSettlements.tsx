@@ -92,20 +92,22 @@ export default function RepSettlements() {
             </div>
 
             {towerSettlements.length > 0 && (
-              <table className="tbl" style={{ marginTop: '0.6rem' }}>
-                <thead>
-                  <tr><th>Date</th><th>Amount</th><th>Note</th></tr>
-                </thead>
-                <tbody>
-                  {towerSettlements.map((s) => (
-                    <tr key={s.id}>
-                      <td className="muted">{new Date(s.created_at).toLocaleDateString()}</td>
-                      <td>{formatINR(s.amount)}</td>
-                      <td className="muted">{s.note || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="tbl-wrap" style={{ marginTop: '0.6rem' }}>
+                <table className="tbl">
+                  <thead>
+                    <tr><th>Date</th><th>Amount</th><th>Note</th></tr>
+                  </thead>
+                  <tbody>
+                    {towerSettlements.map((s) => (
+                      <tr key={s.id}>
+                        <td className="muted">{new Date(s.created_at).toLocaleDateString()}</td>
+                        <td>{formatINR(s.amount)}</td>
+                        <td className="muted">{s.note || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
 
             {!allSettled && (

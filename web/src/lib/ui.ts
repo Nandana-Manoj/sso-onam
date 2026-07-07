@@ -66,10 +66,24 @@ export function downloadCsv(filename: string, headers: string[], rows: (string |
   URL.revokeObjectURL(url);
 }
 
-/** Download an image (e.g. a QR) to the device — saves to the camera roll on mobile. */
+/** Save an image (e.g. a QR) to the device. Prefers the share sheet — on mobile
+ *  that's the only reliable way to land in Photos; a plain <a download> often
+ *  drops into Files/Downloads instead. Falls back to <a download> where the
+ *  share sheet (or file sharing) isn't supported, e.g. desktop browsers. */
 export async function saveImage(url: string, filename: string): Promise<void> {
   const res = await fetch(url);
   const blob = await res.blob();
+  const file = new File([blob], filename, { type: blob.type || 'image/png' });
+
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      return;
+    } catch (err) {
+      if ((err as DOMException)?.name === 'AbortError') return; // user cancelled the share sheet
+    }
+  }
+
   const objUrl = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = objUrl;

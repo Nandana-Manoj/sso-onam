@@ -159,34 +159,36 @@ export default function SadyaScanOverview({
           <h3>By Tower</h3>
           <button className="secondary" disabled={towerRolls.length === 0} onClick={exportCsv}>Download CSV</button>
         </div>
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>Tower</th>
-              <th>Flats</th>
-              <th>Served</th>
-              <th>Remaining</th>
-            </tr>
-          </thead>
-          <tbody>
-            {towerRolls.map((r) => (
-              <tr key={r.towerId}>
-                <td>{r.towerName}</td>
-                <td>{r.flats}</td>
-                <td>{r.redeemed}{r.booked ? ` / ${r.booked}` : ''}</td>
-                <td>{Math.max(0, r.booked - r.redeemed) || '—'}</td>
+        <div className="tbl-wrap">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Tower</th>
+                <th>Flats</th>
+                <th>Served</th>
+                <th>Remaining</th>
               </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th>Total</th>
-              <th>{flatsTotal}</th>
-              <th>{redeemed} / {booked}</th>
-              <th>{remaining}</th>
-            </tr>
-          </tfoot>
-        </table>
+            </thead>
+            <tbody>
+              {towerRolls.map((r) => (
+                <tr key={r.towerId}>
+                  <td>{r.towerName}</td>
+                  <td>{r.flats}</td>
+                  <td>{r.redeemed}{r.booked ? ` / ${r.booked}` : ''}</td>
+                  <td>{Math.max(0, r.booked - r.redeemed) || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th>Total</th>
+                <th>{flatsTotal}</th>
+                <th>{redeemed} / {booked}</th>
+                <th>{remaining}</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
     </>
   );

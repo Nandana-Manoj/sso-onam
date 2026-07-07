@@ -369,8 +369,9 @@ code { background: #f4ecdd; padding: 0.05rem 0.35rem; border-radius: 6px; font-s
 .bar-row .bar-val { font-size: 0.82rem; color: var(--muted); min-width: 56px; text-align: right; }
 
 /* ---------- Table ---------- */
+.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .tbl { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.tbl th, .tbl td { text-align: left; padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--line); }
+.tbl th, .tbl td { text-align: left; padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .tbl th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
 .tbl tbody tr:last-child td { border-bottom: none; }
 .tbl td:last-child, .tbl th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
