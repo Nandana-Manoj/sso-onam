@@ -63,8 +63,13 @@ export default function OfflinePaymentForm({
           p_note: note.trim() || null,
         });
     setBusy(false);
-    if (error) setMsg(error.message);
-    else {
+    if (error) {
+      setMsg(
+        !isSadya && error.message.includes('already exists for this event')
+          ? 'This flat already has a payment in progress in the app. Ask the resident to submit it (enter UTR & confirm), then verify it from your pending list instead of recording it offline.'
+          : error.message,
+      );
+    } else {
       setMsg(kind === 'sadya'
         ? `Recorded ✓ Sadya for Flat ${flat.trim()} confirmed (${adults} ${adults === 1 ? 'pass' : 'passes'}).`
         : `Recorded ✓ Flat ${flat.trim()} marked as paid.`);
