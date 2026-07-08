@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '../lib/supabase';
 import { formatINR } from '../lib/format';
 import { downloadCsv } from '../lib/ui';
 import { Donut } from './Charts';
@@ -80,7 +81,7 @@ export default function ContributionOverview({
         </div>
         <div className="stat amber">
           <div className="stat-value">{flatsPaid.size}</div>
-          <div className="stat-label">Flats Paid</div>
+          <div className="stat-label">{flatsPaid.size === 1 ? 'Flat Paid' : 'Flats Paid'}</div>
         </div>
         {(refundedTotal > 0 || counts.refunded > 0) && (
           <div className="stat red">
@@ -136,9 +137,20 @@ function LedgerTable({
   const [towerFilter, setTowerFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<'all' | RowState>('all');
   const [expanded, setExpanded] = useState(false);
+  const [residentsBusy, setResidentsBusy] = useState(false);
+  const [residentsErr, setResidentsErr] = useState<string | null>(null);
   const multiTower = towers.length > 1;
   const towerName = (id: string) => towers.find((t) => t.id === id)?.name ?? '—';
   const flatInfo = new Map(flats.map((f) => [f.id, f]));
+  // A flat can carry more than one contribution row over time (a rejected
+  // attempt followed by a fresh, successful one) — the query has no ORDER BY,
+  // so pick whichever row is actually counted (verified/awaiting/refunded)
+  // over a stale terminal one, regardless of which the DB happens to return last.
+  const contribByFlat = new Map<string, OverviewContrib>();
+  for (const c of contribs) {
+    const cur = contribByFlat.get(c.flat_id);
+    if (!cur || effState(cur) === 'none') contribByFlat.set(c.flat_id, c);
+  }
 
   const rows = contribs
     .map((c) => ({ id: c.id, flat: flatInfo.get(c.flat_id)?.flat_number ?? '—', towerId: c.paid_to_tower_id, st: effState(c), amt: cAmt(c) }))
@@ -157,6 +169,49 @@ function LedgerTable({
       `onam-contributions-${stamp}.csv`,
       ['Tower', 'Flat', 'Status', 'Amount (Rs.)'],
       rows.map((r) => [towerName(r.towerId), r.flat, STATE_LABEL[r.st], r.amt]),
+    );
+  }
+
+  /** Full resident roster (not just flats with a contribution) — one row per
+   *  person, scoped to whichever towers this dashboard already covers (all
+   *  towers for admins, just the rep's own towers for reps, via RLS). */
+  async function exportResidentsCsv() {
+    setResidentsBusy(true);
+    setResidentsErr(null);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('name, mobile, tower_id, flat_id, claimed')
+      .in('tower_id', towers.map((t) => t.id));
+    setResidentsBusy(false);
+    if (error) { setResidentsErr(error.message); return; }
+
+    type ResidentRow = { name: string; mobile: string; tower_id: string | null; flat_id: string | null; claimed: boolean };
+    const rows = ((data as ResidentRow[]) ?? [])
+      .map((p) => {
+        const flat = p.flat_id ? flatInfo.get(p.flat_id) : undefined;
+        const c = flat ? contribByFlat.get(flat.id) : undefined;
+        const st = c ? effState(c) : 'none';
+        return {
+          tower: towerName(p.tower_id ?? ''),
+          flat: flat?.flat_number ?? '—',
+          name: p.name,
+          mobile: p.mobile,
+          registered: p.claimed ? 'Yes' : 'No',
+          status: STATE_LABEL[st],
+          // Only a counted (verified/awaiting/refunded) contribution has a real
+          // paid amount — a payment_pending/rejected/expired row's `amount` is
+          // just the pledge, not money actually collected, so it must read 0.
+          amount: c && st !== 'none' ? cAmt(c) : 0,
+        };
+      })
+      .sort((a, b) => a.tower.localeCompare(b.tower, undefined, { numeric: true }) || a.flat.localeCompare(b.flat, undefined, { numeric: true }));
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(
+      `onam-residents-${stamp}.csv`,
+      ['Tower', 'Flat', 'Name', 'Mobile', 'Registered', 'Contribution Status', 'Amount (Rs.)'],
+      rows.map((r) => [r.tower, r.flat, r.name, r.mobile, r.registered, r.status, r.amount]),
+      "Amount is the flat's total contribution, repeated on every resident of that flat — do not sum this column. For collection totals, use Download Contributions CSV instead.",
     );
   }
 
@@ -223,10 +278,16 @@ function LedgerTable({
 
   return (
     <div className="card">
-      <div className="between">
-        <h3>Flats &amp; Amounts</h3>
-        <button className="secondary" disabled={rows.length === 0} onClick={exportCsv}>Download CSV</button>
+      <h3>Flats &amp; Amounts</h3>
+      <div className="row" style={{ margin: '0.6rem 0' }}>
+        <button className="secondary" style={{ flex: 1 }} disabled={rows.length === 0} onClick={exportCsv}>
+          Download Contributions CSV
+        </button>
+        <button className="secondary" style={{ flex: 1 }} disabled={residentsBusy} onClick={exportResidentsCsv}>
+          {residentsBusy ? 'Preparing…' : 'Download Residents CSV'}
+        </button>
       </div>
+      {residentsErr && <p className="error">{residentsErr}</p>}
       {filters}
       {rows.length === 0 ? emptyMsg : renderTable(rows.slice(0, ROWS_PREVIEW))}
       {hasOverflow && (
@@ -239,7 +300,7 @@ function LedgerTable({
         <Modal title="Flats & Amounts" onClose={() => setExpanded(false)} wide>
           <div className="between" style={{ marginBottom: '0.4rem' }}>
             <span className="muted">{rows.length} contribution{rows.length === 1 ? '' : 's'}</span>
-            <button className="secondary" disabled={rows.length === 0} onClick={exportCsv}>Download CSV</button>
+            <button className="secondary" disabled={rows.length === 0} onClick={exportCsv}>Download Contributions CSV</button>
           </div>
           {filters}
           {rows.length === 0 ? emptyMsg : renderTable(rows)}

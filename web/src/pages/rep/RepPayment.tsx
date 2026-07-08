@@ -71,9 +71,9 @@ export default function RepPayment() {
       <h2>Payment Details</h2>
       <div className="card card-accent">
         <p className="muted" style={{ marginTop: 0 }}>
-          Used by residents in <strong>all towers you manage</strong>. Your UPI ID powers the resident's "pay" button but is never shown to them.
+          Used by residents in <strong>all towers you manage</strong>. Shown to residents making a contribution, so they can copy it and pay you directly.
         </p>
-        <label>UPI ID (for the pay button — not shown to residents)
+        <label>UPI ID (shown to residents making a contribution, to copy &amp; pay)
           <input placeholder="e.g. ravi@okaxis" value={upiId} onChange={(e) => setUpiId(e.target.value)} />
         </label>
         <label>Payment Mobile Number (shown to residents to copy &amp; pay)

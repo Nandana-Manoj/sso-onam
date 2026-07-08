@@ -150,6 +150,7 @@ export default function ContributionPanel({ event }: { event: EventConfig }) {
                 amount={payAmount}
                 note={`${event.name} contribution`}
                 qrKey={profile?.tower_id ?? undefined}
+                variant="contribution"
               />
             )}
             <form onSubmit={submitPayment}>

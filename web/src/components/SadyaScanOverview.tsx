@@ -115,30 +115,30 @@ export default function SadyaScanOverview({
       <div className="grid cols-3">
         <div className="stat green">
           <div className="stat-value">{redeemed}</div>
-          <div className="stat-label">Meals Served ({servedPct}%)</div>
+          <div className="stat-label">{redeemed === 1 ? 'Meal' : 'Meals'} Served ({servedPct}%)</div>
         </div>
         <div className="stat amber">
           <div className="stat-value">{remaining}</div>
-          <div className="stat-label">Meals Remaining</div>
+          <div className="stat-label">{remaining === 1 ? 'Meal' : 'Meals'} Remaining</div>
         </div>
         <div className="stat blue">
           <div className="stat-value">{booked}</div>
-          <div className="stat-label">Meals Booked</div>
+          <div className="stat-label">{booked === 1 ? 'Meal' : 'Meals'} Booked</div>
         </div>
       </div>
 
       <div className="grid cols-3">
         <div className="stat green">
           <div className="stat-value">{flatsFullyServed}</div>
-          <div className="stat-label">Flats Fully Served</div>
+          <div className="stat-label">{flatsFullyServed === 1 ? 'Flat' : 'Flats'} Fully Served</div>
         </div>
         <div className="stat amber">
           <div className="stat-value">{flatsPartial}</div>
-          <div className="stat-label">Flats Partly Served</div>
+          <div className="stat-label">{flatsPartial === 1 ? 'Flat' : 'Flats'} Partly Served</div>
         </div>
         <div className="stat blue">
           <div className="stat-value">{flatsNotScanned}</div>
-          <div className="stat-label">Flats Not Yet Scanned</div>
+          <div className="stat-label">{flatsNotScanned === 1 ? 'Flat' : 'Flats'} Not Yet Scanned</div>
         </div>
       </div>
 

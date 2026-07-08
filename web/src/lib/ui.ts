@@ -39,22 +39,34 @@ export function prettyRole(role: string): string {
     .join(' ');
 }
 
-/** Build a UPI deep link (upi://pay) that opens the payer's UPI app prefilled. */
+/** Build a UPI deep link that opens the payer's UPI app prefilled. On Android,
+ *  a plain `upi://` link goes straight to whichever app is set as the OS
+ *  default for that scheme (often WhatsApp) with no chance to pick another.
+ *  Wrapping it as an `intent://` URI makes Chrome fire a real Android Intent
+ *  instead, which shows the "Open with" app chooser. iOS/desktop don't
+ *  understand `intent://`, so they get the plain link as before. */
 export function buildUpiLink(opts: { pa: string; pn?: string; am?: number | string; tn?: string }): string {
   const parts = [`pa=${encodeURIComponent(opts.pa)}`, 'cu=INR'];
   if (opts.pn) parts.push(`pn=${encodeURIComponent(opts.pn)}`);
   if (opts.am !== undefined && opts.am !== '' && opts.am !== null) parts.push(`am=${encodeURIComponent(String(opts.am))}`);
   if (opts.tn) parts.push(`tn=${encodeURIComponent(opts.tn)}`);
-  return `upi://pay?${parts.join('&')}`;
+  const query = parts.join('&');
+  const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
+  return isAndroid ? `intent://pay?${query}#Intent;scheme=upi;end` : `upi://pay?${query}`;
 }
 
-/** Build + download a CSV file (no dependency). */
-export function downloadCsv(filename: string, headers: string[], rows: (string | number | null)[][]): void {
+/** Build + download a CSV file (no dependency). `note`, if given, is written
+ *  as a leading comment line (prefixed `#`, blank line after) before the
+ *  header row — spreadsheet apps show it as an oddly-placed first cell rather
+ *  than choking on it. */
+export function downloadCsv(filename: string, headers: string[], rows: (string | number | null)[][], note?: string): void {
   const esc = (v: string | number | null) => {
     const s = String(v ?? '');
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const csv = [headers, ...rows].map((r) => r.map(esc).join(',')).join('\n');
+  const lines = note ? [esc(`# ${note}`), ''] : [];
+  lines.push(...[headers, ...rows].map((r) => r.map(esc).join(',')));
+  const csv = lines.join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
