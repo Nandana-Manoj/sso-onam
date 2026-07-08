@@ -97,7 +97,7 @@ export default function SadyaOverview({
         </div>
         <div className="stat amber">
           <div className="stat-value">{mealsConfirmed}</div>
-          <div className="stat-label">Meals Confirmed</div>
+          <div className="stat-label">{mealsConfirmed === 1 ? 'Meal' : 'Meals'} Confirmed</div>
         </div>
         {(refundedTotal > 0 || cancelledPasses > 0) && (
           <div className="stat red">
@@ -271,7 +271,7 @@ function SadyaLedgerTable({
       {rows.length === 0 ? emptyMsg : renderTable(rows.slice(0, ROWS_PREVIEW))}
       {hasOverflow && (
         <button type="button" className="secondary" style={{ width: '100%' }} onClick={() => setExpanded(true)}>
-          Show All {rows.length} Flats →
+          Show All {rows.length} {rows.length === 1 ? 'Flat' : 'Flats'} →
         </button>
       )}
 
