@@ -24,6 +24,13 @@ interface TowerRoll {
   notScanned: number;   // flats whose pass hasn't been scanned at all
 }
 
+const STATUS_LABEL: Record<QrStatus, string> = {
+  issued: 'Not Scanned',
+  partially_redeemed: 'Partly Served',
+  fully_redeemed: 'Fully Served',
+  void: 'Void',
+};
+
 /** Sadya serving dashboard — how the event-day QR scanning is going. Reads the
  *  flat QR passes (allowed vs redeemed) so admins/reps can see meals served,
  *  meals still to come, and which flats have and haven't been scanned. */
@@ -33,6 +40,7 @@ export default function SadyaScanOverview({
   const [passes, setPasses] = useState<PassRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,12 +85,41 @@ export default function SadyaScanOverview({
   const towerRolls = [...byTower.values()].sort((a, b) =>
     a.towerName.localeCompare(b.towerName, undefined, { numeric: true }));
 
+  // Per-flat rows, sorted the same way as the tower rollup, for the flat
+  // search and the flat-level CSV export.
+  const flatRows = live.slice().sort((a, b) =>
+    (a.flats?.towers?.name ?? '').localeCompare(b.flats?.towers?.name ?? '', undefined, { numeric: true })
+    || (a.flats?.flat_number ?? '').localeCompare(b.flats?.flat_number ?? '', undefined, { numeric: true }));
+
+  const searchQuery = search.trim().toLowerCase();
+  const searchMatches = searchQuery
+    ? flatRows.filter((p) => (p.flats?.flat_number ?? '').toLowerCase().includes(searchQuery))
+    : [];
+
   function exportCsv() {
     const stamp = new Date().toISOString().slice(0, 10);
     downloadCsv(
       `onam-sadya-serving-${stamp}.csv`,
       ['Tower', 'Flats', 'Meals Booked', 'Meals Served', 'Remaining', 'Flats Fully Served', 'Flats Not Scanned'],
       towerRolls.map((r) => [r.towerName, r.flats, r.booked, r.redeemed, r.booked - r.redeemed, r.fullyServed, r.notScanned]),
+    );
+  }
+
+  /** Per-flat sadya CSV — same RLS-scoped `passes` data as the tower rollup,
+   *  so an admin gets the whole society and a rep gets only their tower(s). */
+  function exportFlatsCsv() {
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(
+      `onam-sadya-flats-${stamp}.csv`,
+      ['Tower', 'Flat', 'Meals Booked', 'Meals Served', 'Remaining', 'Status'],
+      flatRows.map((p) => [
+        p.flats?.towers?.name ?? '—',
+        p.flats?.flat_number ?? '—',
+        p.allowed_scans,
+        p.redeemed_count,
+        Math.max(0, p.allowed_scans - p.redeemed_count),
+        STATUS_LABEL[p.status],
+      ]),
     );
   }
 
@@ -155,9 +192,51 @@ export default function SadyaScanOverview({
       </div>
 
       <div className="card">
-        <div className="between">
-          <h3>By Tower</h3>
-          <button className="secondary" disabled={towerRolls.length === 0} onClick={exportCsv}>Download CSV</button>
+        <h3>Search Flats</h3>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by flat number…"
+        />
+        {searchQuery && (
+          searchMatches.length === 0 ? (
+            <p className="muted" style={{ marginTop: '0.6rem' }}>No matching flat.</p>
+          ) : (
+            <div className="tbl-wrap" style={{ marginTop: '0.6rem' }}>
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Flat</th>
+                    <th>Tower</th>
+                    <th>Served</th>
+                    <th>Remaining to be served</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {searchMatches.map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.flats?.flat_number ?? '—'}</td>
+                      <td>{p.flats?.towers?.name ?? '—'}</td>
+                      <td>{p.redeemed_count}{p.allowed_scans ? ` / ${p.allowed_scans}` : ''}</td>
+                      <td>{Math.max(0, p.allowed_scans - p.redeemed_count) || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+      </div>
+
+      <div className="card">
+        <h3>By Tower</h3>
+        <div className="row" style={{ margin: '0.6rem 0' }}>
+          <button className="secondary" style={{ flex: 1 }} disabled={towerRolls.length === 0} onClick={exportCsv}>
+            Download Tower CSV
+          </button>
+          <button className="secondary" style={{ flex: 1 }} disabled={flatRows.length === 0} onClick={exportFlatsCsv}>
+            Download Flats CSV
+          </button>
         </div>
         <div className="tbl-wrap">
           <table className="tbl">
@@ -166,7 +245,7 @@ export default function SadyaScanOverview({
                 <th>Tower</th>
                 <th>Flats</th>
                 <th>Served</th>
-                <th>Remaining</th>
+                <th>Remaining to be served</th>
               </tr>
             </thead>
             <tbody>
