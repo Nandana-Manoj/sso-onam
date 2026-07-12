@@ -22,9 +22,14 @@ const cfg = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID as string | undefined,
 };
 
+// Staging-only kill switch: forces phone verification off for manual testing
+// without clearing the real Firebase keys (so re-enabling is a one-line flip,
+// not re-pasting secrets). Leave unset in prod.
+const otpForcedOff = import.meta.env.VITE_DISABLE_OTP === 'true';
+
 /** True when the Firebase web config is present — phone verification is available. */
 export const firebaseEnabled =
-  Boolean(cfg.apiKey && cfg.authDomain && cfg.projectId && cfg.appId);
+  !otpForcedOff && Boolean(cfg.apiKey && cfg.authDomain && cfg.projectId && cfg.appId);
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
